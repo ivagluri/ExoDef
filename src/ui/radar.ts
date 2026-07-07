@@ -28,17 +28,27 @@ export interface Radar {
 
 export function createRadar(): Radar {
   const canvas = document.createElement("canvas");
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = WIDTH * dpr;
-  canvas.height = HEIGHT * dpr;
   canvas.style.cssText = `
     position: absolute; right: 14px; top: 46px;
-    width: ${WIDTH}px; height: ${HEIGHT}px;
     background: #070b18c0; border: 1px solid #3a4568; border-radius: 4px;
   `;
   document.getElementById("hud")!.appendChild(canvas);
   const ctx = canvas.getContext("2d")!;
-  ctx.scale(dpr, dpr);
+
+  // Scale with the window so labels stay readable on large displays (playtest:
+  // tiny at WQHD) without growing past 1× on small ones. Drawing code works in
+  // logical WIDTH×HEIGHT units; the transform handles the rest.
+  function resize(): void {
+    const scale = Math.min(1.6, Math.max(1, window.innerHeight / 900));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(WIDTH * scale * dpr);
+    canvas.height = Math.round(HEIGHT * scale * dpr);
+    canvas.style.width = `${Math.round(WIDTH * scale)}px`;
+    canvas.style.height = `${Math.round(HEIGHT * scale)}px`;
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener("resize", resize);
 
   const toX = (u: number) => ((u + U_HALF) / (2 * U_HALF)) * WIDTH;
   const toY = (alt: number) => HEIGHT - (alt / ALT_MAX) * HEIGHT;
@@ -58,7 +68,7 @@ export function createRadar(): Radar {
 
       // altitude band ticks (§2) — bright enough to read over the dark bg
       // (playtest 2026-07-07: original 40%-alpha lines were invisible)
-      ctx.font = "8px Menlo, monospace";
+      ctx.font = "9.5px Menlo, monospace";
       ctx.lineWidth = 1;
       for (const alt of [BANDS.landingTop, BANDS.lowTop, BANDS.midTop, BANDS.highTop, BANDS.entryTop]) {
         const y = toY(alt) + 0.5; // crisp 1px line
