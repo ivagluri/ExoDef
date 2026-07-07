@@ -56,15 +56,18 @@ Waves 1–15 minus missiles; upgrades; win/lose framing.
 
 ## Phase 4 — Missile volleys & interception (the signature)
 
-Everything in GAME-DESIGN.md §6/§7.
+Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additions (radar §11.4, pre-placed battery, bonus removal).
 
-- [ ] Missile battery tower: placement (first free, must place before round 1), tiers, ammo/reload/silos
+- [ ] Remove early-start bonus (playtest: unnecessary) — `balance.ts`, `game.ts`, docs
+- [ ] Fix HUD button responsiveness (see Known issues below)
+- [ ] Missile battery tower: free T1 **pre-placed at map center** (dormant until first siren, unsellable), additional at $600, tiers, ammo/reload/silos
 - [ ] Warheads: over-horizon bézier arcs, per-volley heading, staggered launches, city + counterforce targeting
 - [ ] Alert flow: siren stub, banner, grace period, round-preview ⚠ warnings
 - [ ] Coordinate view: dual ortho viewports (side 70% / top 30%, lateral axes aligned), volley frame math (§7.1), 0.6s camera transition, TAB free toggle, auto-return
 - [ ] Aiming: shared 3D crosshair + ghost mirror, Scheme A (plotted shot) + Scheme B (plot+commit), settings toggle, proximity inhibit y≥15
 - [ ] Auto-pick battery with preview line + flight time (§7.2); interceptor flight; expanding blast spheres; warhead kill check (§7.3)
 - [ ] Warhead impacts (city killed outright, tower + splash); intercept bounty
+- [ ] Persistent radar overlay (§11.4): corner canvas in both views, camera-relative lateral × altitude, warheads loudest / grunts faint
 - [ ] Sim continues during coordinate view (verify explicitly)
 
 **DoD:** waves 1–15 fully playable including real volleys at 5/9/12/15; counterforce at 15 threatens batteries; both input schemes work.
@@ -72,6 +75,7 @@ Everything in GAME-DESIGN.md §6/§7.
 ## Phase 5 — Full arc & polish
 
 - [ ] Formula waves 16–50 + authored wave-50 finale + victory screen; freeplay 51+ (§9)
+- [ ] Spawn-spread parameter: delivery gets irregular/staggered as waves rise, same volume (§9, playtest 2026-07-07) — may retroactively loosen waves ~10–15
 - [ ] **Boss stages** (§5 mothership, §9): mega enemy at waves 15/30/45 that descends slowly and emits grunts/divers, escalating per appearance; wave 50 finale = boss + max volley. Note: wave 15's current grunt/bomber composition in `src/sim/waves.ts` gets replaced by the boss. (User idea, added 2026-07-07)
 - [ ] Bonus cities at every ×10 milestone
 - [ ] Audio: WebAudio synth cues — siren (the star), gun/flak/launch/blast/city-drone/round-sting/UFO warble (§12)
@@ -86,6 +90,11 @@ Everything in GAME-DESIGN.md §6/§7.
 
 Driven by user playtests against GAME-DESIGN.md §15's open questions. No new systems — tuning `balance.ts`, fixing feel issues, choosing the default fire scheme.
 
+Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
+- Economy is too generous — tighten income/bounties/costs together
+- Stronger-enemy volume too low as stages progress (grunt swarms stay too easy); lever undecided: wave composition vs. enemy strength vs. economy
+- Battery upgrade direction: bigger blast radius vs. fan-shot (§15 Q7)
+
 ---
 
 ## Known issues (fix in next session before/with Phase 4)
@@ -98,4 +107,5 @@ Driven by user playtests against GAME-DESIGN.md §15's open questions. No new sy
 - **2026-07-07** — Phase 1 complete: scaffold, world render, orbit camera, sim loop. `npm run build` clean, dev server verified. Note: Node.js was installed via Homebrew this session (machine had none). Files: `src/{main,balance}.ts`, `src/render/{scene,cameras}.ts`, `src/input/orbit.ts`, `src/sim/state.ts`, `src/ui/hud.ts`. Await user playtest of the diorama before/while starting Phase 2.
 - **2026-07-07** — Phase 2 complete: sim entities + game orchestration (`src/sim/{game,waves,enemies,towers}.ts`), placement input, render sync, full HUD. Headless smoke test added (`npm run smoke`, uses tsx) — run it after sim changes. **User playtest feedback applied:** grunt movement felt rigid (axis-locked Space Invaders march) → replaced with organic meander (wandering heading + continuous swelling sink + per-member bob); GAME-DESIGN.md §5 updated to match. Also: grunts fast-dive from ENTRY to y=100 before meandering (pacing — literal spec meant minutes of dead time).
 - **2026-07-07 (later)** — Phase 4 NOT started: an agent was launched for it but stopped almost immediately (user's usage budget ran out mid-session). No Phase 4 code exists. User playtested Phase 3: "looks surprisingly good"; one item backburnered to Phase 5 (upgrade preview in tower panel, see Phase 5 list). **Resume here: implement Phase 4 per the checklist above and GAME-DESIGN.md §6/§7.**
-- **2026-07-07** — Phase 3 complete: bomber/diver/UFO (`src/sim/raiders.ts` + bombs), upgrade/sell/priority via tower panel (`src/sim/actions.ts`), waves 1–15 (volleys stubbed as warnings), bonus city at wave 10, shared RNG (`src/sim/rng.ts`). **Second playtest feedback applied:** gun rebalanced to long-range/weak (range 80/alt 90, 8 dps T1) vs flak short-range/heavy — user found original gun range left ~1 min dead time; GAME-DESIGN.md §4 updated. Smoke test is now an auto-player that clears all 15 waves (6/6 cities, score ~15k). Session paused here at user request (usage budget). **Next agent: Phase 4 = GAME-DESIGN.md §6/§7, the dual-viewport interception.** Watch for: sim must keep running during coordinate view; battery placement required before round 1 (currently not enforced — add when battery exists).
+- **2026-07-07** — Phase 3 complete: bomber/diver/UFO (`src/sim/raiders.ts` + bombs), upgrade/sell/priority via tower panel (`src/sim/actions.ts`), waves 1–15 (volleys stubbed as warnings), bonus city at wave 10, shared RNG (`src/sim/rng.ts`). **Second playtest feedback applied:** gun rebalanced to long-range/weak (range 80/alt 90, 8 dps T1) vs flak short-range/heavy — user found original gun range left ~1 min dead time; GAME-DESIGN.md §4 updated. Smoke test is now an auto-player that clears all 15 waves (6/6 cities, score ~15k). Session paused here at user request (usage budget). **Next agent: Phase 4 = GAME-DESIGN.md §6/§7, the dual-viewport interception.** Watch for: sim must keep running during coordinate view; battery placement required before round 1 (currently not enforced — add when battery exists). *(Superseded 2026-07-07 review: battery is now pre-placed, no placement gate.)*
+- **2026-07-07** — Playtest-notes review (`playtestnotes.md`) via design interview before Phase 4. Decisions: 9 weapon ideas → §14 backlog (curate 2–3 after Phase 4); persistent radar overlay added to Phase 4 scope (new §11.4 — answers §15 Q3); free battery now **pre-placed at map center**, dormant + unsellable (user idea mid-review); early-start bonus cut; battery "spread" = blast radius (already in tiers), direction question logged as §15 Q7; spawn-spread → Phase 5; economy + stronger-enemy-volume tuning → Phase 6. Both docs amended.

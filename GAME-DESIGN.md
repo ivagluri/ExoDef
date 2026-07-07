@@ -38,13 +38,13 @@ top view (200×200 ground, N up)
         │   ⌂C3              ⌂C4   │   C3 (-70,  30)   C4 ( 70,  30)
         │                          │   C5 (  0,  70)   C6 (  0, -75)
         │        (open ground      │
-        │         = build area)    │   ◈ = suggested first-battery
-        │   ⌂C1      ◈       ⌂C2   │       spot (player chooses)
+        │         = build area)    │   ◈ = the free starting battery,
+        │   ⌂C1      ◈       ⌂C2   │       pre-placed at map center
         │            ⌂C6           │
         └──────────────────────────┘
 ```
 
-Positions are (x, z). The center is deliberately open: central battery placement minimizes worst-case interceptor flight time — players discover this, it isn't enforced.
+Positions are (x, z). The center is deliberately open: the free starting battery sits there from the first frame (central placement minimizes worst-case interceptor flight time), visibly dormant until the first volley — a standing promise of what's coming. *(Changed from player-placed per 2026-07-07 playtest review.)* Additional batteries are placed freely like any tower.
 
 ### Altitude bands
 
@@ -69,8 +69,8 @@ Band edges **[tunable]**.
 ```
 ┌──► build/upgrade freely (no time limit)
 │         │
-│    [START ROUND n]  ── early-start unused-time bonus? No: flat
-│         │              +$50 if started within 5s of round end [tunable]
+│    [START ROUND n]  ── no early-start bonus (cut per 2026-07-07
+│         │              playtest: unnecessary, economy already generous)
 │    enemies spawn & descend · towers fire · build allowed mid-round
 │         │
 │    (some rounds: ⚠ MISSILE LAUNCH event, see §6 — round continues)
@@ -88,7 +88,7 @@ Band edges **[tunable]**.
 ### Starting state
 
 - Cash: **$650 [tunable]**.
-- One **free Missile Battery (T1)** must be placed before round 1 can start (tutorializes placement + guarantees interception capability).
+- One **free Missile Battery (T1) pre-placed at map center**, dormant ("asleep") until the first volley's siren. It cannot be sold (it was free — no cash-out), but upgrades and dies like any tower. *(Was player-placed-before-round-1; changed per 2026-07-07 playtest review — the sleeping battery foreshadows the missile waves.)*
 - All 6 cities alive.
 
 ---
@@ -105,7 +105,7 @@ Towers occupy a circular footprint (radius 6 u), placed freely on open ground (�
 |---|---|---|---|---|---|
 | **Gun turret** | $150 | 80 | ≤90 (near formation band) | 2 dmg × 4/s = 8 DPS, single target | Long reach, weak hits — chip coverage. *(Rebalanced after 2026-07-07 playtest: original short-range version left minutes of dead time before contact.)* |
 | **Flak cannon** | $300 | 60 | MID (≤80) | 15 dmg burst / 1.5s, 8 u AoE radius | The kill power vs. grouped grunts — shorter reach than gun, way harder hits |
-| **Missile battery** | $500 (first free) | interception only | any (via missile view) | blast kills warheads | See §6. Does NOT auto-fire at invaders |
+| **Missile battery** | $500 (first free, pre-placed at center, unsellable) | interception only | any (via missile view) | blast kills warheads | See §6. Does NOT auto-fire at invaders |
 
 ### Upgrade tiers (each tower: 2 upgrade tiers, applied per-tower)
 
@@ -323,13 +323,14 @@ Warhead trajectories are deterministic arcs (precomputed control points, e.g. a 
 
 | Source | Amount |
 |---|---|
-| Starting cash | $650 (+ free T1 battery) |
+| Starting cash | $650 (+ free T1 battery pre-placed at center) |
 | City income | $25 / city / round |
 | Grunt / Diver / Bomber / UFO | $8 / $15 / $25 / $150 |
 | Intercepted warhead | $30 |
-| Early round start (within 5s) | +$50 |
 
-Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 city income + start bonus) affords the second tower by round 2 and ~$1000 by round 5's first volley — enough for a battery T2 upgrade OR a saved cushion. Builder agents: keep this doc's table as the single source; put numbers in one `balance.ts`.
+*(The early-start bonus was cut per 2026-07-07 playtest: unnecessary. Same playtest flagged the economy as **too generous overall** — tighten in the Phase 6 balance pass.)*
+
+Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 city income) affords the second tower by round 2 and ~$1000 by round 5's first volley — enough for a battery T2 upgrade OR a saved cushion. Builder agents: keep this doc's table as the single source; put numbers in one `balance.ts`.
 
 ---
 
@@ -358,6 +359,7 @@ Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 city income + start
 ### Waves 16–50 (formula, hand-tuned exceptions allowed)
 
 - Enemy HP × `1.04^(wave−15)`; group counts +8% / wave (rounded); grunt descent speed +1% / wave **[tunable]**.
+- **Spawn delivery loosens with wave** (2026-07-07 playtest): early waves arrive in tight batches (good), but later waves should feel irregular and "random attack"-like — same volume, spread-out staggered timing. Implement as a spawn-jitter/spread parameter in the formula generator that scales with wave number (it may retroactively loosen waves ~10–15 too).
 - Volley every 3–4 waves; warheads `2 + floor((wave−5)/4)` cap 8; counterforce chance 25%.
 - Bonus city at each ×10 milestone.
 - **Boss stages at 15/30/45**: mothership replaces the normal ground wave, escalating each time (HP, emission rate, emitted enemy mix).
@@ -412,7 +414,7 @@ Gamepad: out of scope v1 (backlog §14).
 │                    [TAB] to intercept                │    (only during volley)
 │ ┌────┐┌────┐┌────┐                                   │
 │ │▲gun││✱flk││◈bty│   ▶ START ROUND 12  ⚠ MISSILES    │ ← build bar + round
-│ │$150││$300││$600│      (+$50 if quick)              │    preview w/ warning
+│ │$150││$300││$600│      ▦ radar (§11.4)              │    preview w/ warning
 │ └────┘└────┘└────┘                                   │
 └──────────────────────────────────────────────────────┘
 ```
@@ -425,7 +427,25 @@ Gamepad: out of scope v1 (backlog §14).
 
 ### 11.3 Coordinate-view HUD
 
-Per §6.3 wireframe, plus: per-battery ammo pips (`◈₁ ▪▪▪▪▫▫  ◈₂ ▪▪ RELOADING`), auto-pick preview line with flight time, warhead count remaining, scheme indicator (`PLOTTED SHOT` / `PLOT+COMMIT`), and a thin strip showing the map-mode alert state so a glance says whether the ground war is going badly (the full peek still costs a TAB).
+Per §6.3 wireframe, plus: per-battery ammo pips (`◈₁ ▪▪▪▪▫▫  ◈₂ ▪▪ RELOADING`), auto-pick preview line with flight time, warhead count remaining, scheme indicator (`PLOTTED SHOT` / `PLOT+COMMIT`), and the persistent radar overlay (§11.4), which supersedes the earlier "thin map-status strip" idea as the glanceable ground-war readout (the full peek still costs a TAB).
+
+### 11.4 Radar overlay (persistent) — added 2026-07-07 playtest review
+
+The fixed ~40° camera pitch makes altitude hard to read at a glance. A small always-on **corner radar** fixes that in both views (and answers §15 Q3, the peek problem):
+
+```
+ALT                       axes: X = lateral position relative to the
+160 ┤            · ·            CURRENT camera heading (dots correspond
+120 ┤     ·                     left/right with the screen, even while
+ 80 ┤  ··   ···                 orbiting); Y = altitude 0–160 with
+ 40 ┤          ◆                band tick marks (§2)
+  0 ┴─────────────────    in coordinate view the lateral axis follows
+    ← matches screen →    the volley frame (§7.1) — same convention
+```
+
+- **Contents: everything airborne, loudness ∝ threat.** Warheads = brightest/largest (red), bomber/diver/UFO/boss in their palette colors (§12), grunts = small dim dots so a swarm reads as a texture, not clutter. Bombs/shells/interceptors are omitted.
+- Low dot = urgent. A glance answers "is anything about to land?" without leaving either view.
+- Plain HTML canvas overlay, part of the HUD layer (§13 — no 3D pass needed).
 
 ---
 
@@ -482,13 +502,25 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 - Campaign / multiple maps, meta-progression
 - Real name (SKYFALL is a placeholder)
 
+**Weapon ideas from the 2026-07-07 playtest (backlog; curate 2–3 winners after Phase 4 ships — notes preserved verbatim):**
+- **Frag bomb** — (no further notes yet)
+- **Unlimited-range missile tower** — slow but one-shots a basic enemy. (Context note: "machine guns can't reach spawn heights, missile can but very slow.")
+- **"Napalm clouder"** — leaves a chip-damage field, not across full x/y but a set volume that increases with upgrade (but never full x/y).
+- **Orbital mine launcher** — launches magnetic mine, exact mechanics tbd.
+- **Repulsor beam** — makes an enemy retreat for a set amount of time.
+- **Aerial hack array** — "converts" enemy to become kamikaze unit that attacks other invaders; closest unit for simplicity, or self-destruct if alone; damage scaling tbd.
+- **Blockade launcher** — purely defensive unit, slowly builds and launches physical barriers, not very high up but can soak 2–3 basic enemy impacts. Might be tricky to balance.
+- **Drone launcher** — drones can reach anywhere but less damage than basic gun; can swarm, and concentrated on one unit can equal or surpass the basic gun (max ~2×, needs balancing). Unsure if destroyed by enemy or limited life (lives X shots) — not the final design decision.
+- **Nuke** — not automatic; can wipe all but bosses, but wipes player towers as well, except the missile battery.
+
 ---
 
 ## 15. Open questions → answer via playtest
 
 1. **Default fire scheme:** A (plotted shot) vs B (plot + commit). Ship both, watch which the user keeps.
 2. **Volley density & pace:** warhead count curve, 30s flight time, 8s grace — tune until volleys are tense but plottable.
-3. **The peek problem:** is TAB-peeking at the map mid-volley enough, or does the coordinate view need the thin map-status strip upgraded to a mini radar?
-4. **Difficulty numbers:** everything marked [tunable], especially economy pacing around wave 5 (first volley must be survivable with the free battery alone).
+3. ~~**The peek problem:** is TAB-peeking at the map mid-volley enough, or does the coordinate view need the thin map-status strip upgraded to a mini radar?~~ **Answered 2026-07-07:** yes — and further: the radar is a persistent overlay in *both* views (§11.4), because altitude is hard to read at the fixed pitch at all times, not just during volleys.
+4. **Difficulty numbers:** everything marked [tunable], especially economy pacing around wave 5 (first volley must be survivable with the free battery alone). 2026-07-07 playtest inputs for the Phase 6 pass: economy too generous overall; stronger-enemy volume too low as stages progress (big grunt swarms stay too easy — composition vs. strength vs. economy lever undecided).
 5. **Shared-axis clicks:** does "last click wins u" ever feel like fighting the controls? If so, consider per-view u memory.
 6. **Camera orbit:** does anyone actually rotate? If not, that's fine (it's a toy) — but check it never *hurts* readability.
+7. **Battery upgrade direction** (2026-07-07): bigger blast radius (current tiers, the Missile Command "spread" feel) vs. a fan-shot (one launch → 2–3 interceptors around the plotted point)? User undecided — playtest the current tiers first, revisit after real volleys.
