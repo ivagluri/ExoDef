@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { VOLLEY } from "../balance";
 import { TOWER_DEFS } from "../content/towers";
-import { damageCity, detonateAt } from "./enemies";
+import { damageCore, detonateAt } from "./enemies";
 import { pick, rand, randRange } from "./rng";
 import { toast, type GameState, type Tower, type Warhead } from "./state";
 
@@ -52,18 +52,18 @@ export function launchVolley(state: GameState, warheads: number, counterforce: b
   }
 }
 
-/** Counterforce volleys hunt batteries; everything else hunts cities (§6.1).
+/** Counterforce volleys hunt batteries; everything else hunts cores (§6.1).
  *  Falls back to the other kind when the preferred targets are all dead. */
-function resolveTarget(state: GameState, counterforce: boolean): { kind: "city" | "tower"; id: number; pos: THREE.Vector3 } | null {
-  const cities = state.cities.filter((c) => c.hp > 0);
+function resolveTarget(state: GameState, counterforce: boolean): { kind: "core" | "tower"; id: number; pos: THREE.Vector3 } | null {
+  const cores = state.cores.filter((c) => c.hp > 0);
   const batteries = aliveBatteries(state);
   if (counterforce && batteries.length > 0) {
     const b = pick(batteries);
     return { kind: "tower", id: b.id, pos: b.pos };
   }
-  if (cities.length > 0) {
-    const c = pick(cities);
-    return { kind: "city", id: c.index, pos: c.pos };
+  if (cores.length > 0) {
+    const c = pick(cores);
+    return { kind: "core", id: c.index, pos: c.pos };
   }
   if (batteries.length > 0) {
     const b = pick(batteries);
@@ -123,9 +123,9 @@ export function warheadPointAt(w: Warhead, t: number, out = new THREE.Vector3())
 function warheadImpact(state: GameState, w: Warhead): void {
   w.alive = false;
   state.effects.blasts.push({ pos: w.p2.clone().setY(2), radius: VOLLEY.warheadSplash, ttl: 0.7, maxTtl: 0.7, kind: "impact" });
-  // §8: direct city target destroyed outright; splash destroys towers and
-  // deals a normal 1-hit to any other city caught in it.
-  if (w.targetKind === "city") damageCity(state, w.targetId, 2);
+  // §8: direct core target destroyed outright; splash destroys towers and
+  // deals a normal 1-hit to any other core caught in it.
+  if (w.targetKind === "core") damageCore(state, w.targetId, 2);
   detonateAt(state, w.p2, VOLLEY.warheadSplash, false);
 }
 

@@ -78,7 +78,7 @@ export class AudioSystem {
     });
   }
 
-  cityHit(destroyed: boolean): void {
+  coreHit(destroyed: boolean): void {
     this.glide("sine", destroyed ? 150 : 220, destroyed ? 38 : 90, destroyed ? 0.9 : 0.32, destroyed ? 0.075 : 0.045);
   }
 

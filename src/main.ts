@@ -8,7 +8,7 @@ import { createWorld } from "./render/scene";
 import { RenderSync } from "./render/sync";
 import { cyclePriority, sellTower, upgradeTower } from "./sim/actions";
 import { simTick, startRound, triggerTestBoss, triggerTestMissiles } from "./sim/game";
-import { citiesAlive, createGameState } from "./sim/state";
+import { coresAlive, createGameState } from "./sim/state";
 import { createHud } from "./ui/hud";
 import { createRadar } from "./ui/radar";
 import { AudioSystem } from "./ui/siren";
@@ -49,7 +49,7 @@ const world = createWorld();
 const iso = new IsoCamera(window.innerWidth / window.innerHeight);
 const orbit = new OrbitInput(renderer.domElement, iso);
 const state = createGameState();
-const sync = new RenderSync(world.scene, world.cities);
+const sync = new RenderSync(world.scene, world.cores);
 const placement = new PlacementInput(renderer.domElement, iso.camera, world.scene, state);
 const settings = { ...loadSettings(), open: false };
 let highScore = loadHighScore();
@@ -150,7 +150,7 @@ const radarRight = new THREE.Vector3();
 
 // siren on volley start (§6.2) — watch for the sim-side transition
 let volleyWasActive = false;
-let lastCityHp = state.cities.reduce((sum, city) => sum + city.hp, 0);
+let lastCoreHp = state.cores.reduce((sum, core) => sum + core.hp, 0);
 let lastPhase = state.phase;
 const heardTracers = new Set<object>();
 const heardBlastEffects = new Set<object>();
@@ -197,9 +197,9 @@ function syncAudioEvents(): void {
     }
   }
 
-  const cityHp = state.cities.reduce((sum, city) => sum + city.hp, 0);
-  if (cityHp < lastCityHp) audio.cityHit(citiesAlive(state) < Math.ceil(lastCityHp / 2));
-  lastCityHp = cityHp;
+  const coreHp = state.cores.reduce((sum, core) => sum + core.hp, 0);
+  if (coreHp < lastCoreHp) audio.coreHit(coresAlive(state) < Math.ceil(lastCoreHp / 2));
+  lastCoreHp = coreHp;
 
   if (lastPhase === "combat" && state.phase === "build") audio.roundClear();
   lastPhase = state.phase;

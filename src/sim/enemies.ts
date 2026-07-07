@@ -1,8 +1,8 @@
 import * as THREE from "three";
-import { CITY_RADIUS, GRUNT } from "../balance";
+import { CORE_RADIUS, GRUNT } from "../balance";
 import { ENEMY_DEFS } from "../content/enemies";
 import { rand } from "./rng";
-import { citiesAlive, toast, type Enemy, type GameState, type GruntGroup } from "./state";
+import { coresAlive, toast, type Enemy, type GameState, type GruntGroup } from "./state";
 
 // Grunt swarm behavior (GAME-DESIGN.md §5): loose group dives to the formation
 // band, then meanders organically while sinking. Landing = ground detonation.
@@ -51,7 +51,7 @@ export function killEnemy(state: GameState, enemy: Enemy): void {
   state.score += def.bounty;
 }
 
-/** Ground detonation: destroys towers in radius, deals 1 hit to cities in radius. */
+/** Ground detonation: destroys towers in radius, deals 1 hit to cores in radius. */
 export function detonateAt(state: GameState, pos: THREE.Vector3, radius: number = GRUNT.detonateRadius, showEffect = true): void {
   if (showEffect) {
     state.effects.blasts.push({ pos: pos.clone().setY(2), radius, ttl: 0.55, maxTtl: 0.55, kind: "impact" });
@@ -62,20 +62,20 @@ export function detonateAt(state: GameState, pos: THREE.Vector3, radius: number 
       toast(state, "TOWER DESTROYED");
     }
   }
-  for (const city of state.cities) {
-    if (city.hp > 0 && city.pos.distanceTo(pos) <= radius + CITY_RADIUS) {
-      damageCity(state, city.index, 1);
+  for (const core of state.cores) {
+    if (core.hp > 0 && core.pos.distanceTo(pos) <= radius + CORE_RADIUS) {
+      damageCore(state, core.index, 1);
     }
   }
 }
 
-export function damageCity(state: GameState, cityIndex: number, hits: number): void {
-  const city = state.cities[cityIndex];
-  if (city.hp <= 0) return;
-  city.hp = Math.max(0, city.hp - hits);
-  state.citiesDirty = true;
-  toast(state, city.hp > 0 ? "CITY HIT" : "CITY DESTROYED", 3.5);
-  if (citiesAlive(state) === 0) {
+export function damageCore(state: GameState, coreIndex: number, hits: number): void {
+  const core = state.cores[coreIndex];
+  if (core.hp <= 0) return;
+  core.hp = Math.max(0, core.hp - hits);
+  state.coresDirty = true;
+  toast(state, core.hp > 0 ? "CORE HIT" : "CORE DESTROYED", 3.5);
+  if (coresAlive(state) === 0) {
     state.phase = "gameover";
   }
 }

@@ -46,7 +46,7 @@ export class RenderSync {
 
   constructor(
     private scene: THREE.Scene,
-    private cityGroups: THREE.Group[],
+    private coreGroups: THREE.Group[],
   ) {}
 
   sync(state: GameState): void {
@@ -118,11 +118,11 @@ export class RenderSync {
     this.syncBlasts(state);
     this.syncSpheres(state.interceptBlasts, this.interceptBlastObjs);
     this.syncTracers(state);
-    if (state.citiesDirty) {
-      this.refreshCities(state);
-      state.citiesDirty = false;
+    if (state.coresDirty) {
+      this.refreshCores(state);
+      state.coresDirty = false;
     }
-    this.syncCityGlow(state);
+    this.syncCoreGlow(state);
   }
 
   /** Solid ribbon trail (§12): recent positions rebuilt as capped low-poly segments. */
@@ -286,37 +286,53 @@ export class RenderSync {
     return "flak";
   }
 
-  /** City damage states (§8): full → half the blocks → rubble (none). */
-  private refreshCities(state: GameState): void {
-    for (const city of state.cities) {
-      const group = this.cityGroups[city.index];
+  /** Core damage states (§8): full → half the blocks → rubble (none). */
+  private refreshCores(state: GameState): void {
+    for (const core of state.cores) {
+      const group = this.coreGroups[core.index];
       const blocks = (group.userData.blocks as THREE.Object3D[] | undefined) ?? group.children;
       const visible =
-        city.hp >= 2 ? blocks.length :
-        city.hp === 1 ? Math.ceil(blocks.length / 2) :
+        core.hp >= 2 ? blocks.length :
+        core.hp === 1 ? Math.ceil(blocks.length / 2) :
         0;
       blocks.forEach((block, i) => (block.visible = i < visible));
     }
   }
 
-  private syncCityGlow(state: GameState): void {
-    for (const city of state.cities) {
-      const group = this.cityGroups[city.index];
+  private syncCoreGlow(state: GameState): void {
+    for (const core of state.cores) {
+      const group = this.coreGroups[core.index];
       const glow = group.userData.glow as THREE.Mesh | undefined;
       const mat = group.userData.glowMat as THREE.MeshBasicMaterial | undefined;
       if (!glow || !mat) continue;
-      glow.visible = city.hp > 0;
-      if (city.hp >= 2) {
-        const pulse = 0.5 + 0.5 * Math.sin(state.simTime * 2.2 + city.index * 0.7);
+      glow.visible = core.hp > 0;
+      if (core.hp >= 2) {
+        const pulse = 0.5 + 0.5 * Math.sin(state.simTime * 2.2 + core.index * 0.7);
+        this.tintCoreBlocks(group, null);
         mat.color.setHex(MODEL_COLORS.rangeDome);
         mat.opacity = 0.09 + pulse * 0.05;
         glow.scale.set(1 + pulse * 0.07, 0.22, 1 + pulse * 0.07);
-      } else if (city.hp === 1) {
-        const flicker = 0.5 + 0.5 * Math.sin(state.simTime * 14 + city.index * 3.1);
+      } else if (core.hp === 1) {
+        const flicker = 0.5 + 0.5 * Math.sin(state.simTime * 14 + core.index * 3.1);
+        this.tintCoreBlocks(group, flicker > 0.45 ? 0xff5a5a : MODEL_COLORS.impactBlast);
         mat.color.setHex(MODEL_COLORS.impactBlast);
         mat.opacity = 0.04 + flicker * 0.05;
         glow.scale.set(0.92 + flicker * 0.05, 0.2, 0.92 + flicker * 0.05);
+      } else {
+        this.tintCoreBlocks(group, null);
       }
     }
+  }
+
+  private tintCoreBlocks(group: THREE.Group, color: number | null): void {
+    const blocks = group.userData.blocks as THREE.Mesh[] | undefined;
+    if (!blocks) return;
+    const baseColors = group.userData.baseColors as number[] | undefined;
+    blocks.forEach((block, index) => {
+      if (!block.visible) return;
+      const mat = block.material instanceof THREE.MeshLambertMaterial ? block.material : null;
+      if (!mat) return;
+      mat.color.setHex(color ?? baseColors?.[index] ?? MODEL_COLORS.rangeDome);
+    });
   }
 }

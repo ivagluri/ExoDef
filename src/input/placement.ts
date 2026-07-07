@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CITY_POSITIONS, PLACEMENT } from "../balance";
+import { CORE_POSITIONS, PLACEMENT } from "../balance";
 import { TOWER_DEFS } from "../content/towers";
 import { makeGhost, makeRangeDome } from "../render/models";
 import { toast, type GameState, type Tower } from "../sim/state";
@@ -99,8 +99,8 @@ export class PlacementInput {
   private isValid(): boolean {
     const p = this.groundPoint;
     if (Math.abs(p.x) > PLACEMENT.buildableHalf || Math.abs(p.z) > PLACEMENT.buildableHalf) return false;
-    for (const [cx, cz] of CITY_POSITIONS) {
-      if (Math.hypot(p.x - cx, p.z - cz) < PLACEMENT.cityClearance) return false;
+    for (const [cx, cz] of CORE_POSITIONS) {
+      if (Math.hypot(p.x - cx, p.z - cz) < PLACEMENT.coreClearance) return false;
     }
     for (const tower of this.state.towers) {
       if (tower.alive && Math.hypot(p.x - tower.pos.x, p.z - tower.pos.z) < PLACEMENT.minTowerGap) return false;

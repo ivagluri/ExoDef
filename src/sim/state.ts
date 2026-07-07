@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CITY_HP, CITY_POSITIONS, ECONOMY } from "../balance";
+import { CORE_HP, CORE_POSITIONS, ECONOMY } from "../balance";
 
 // Fixed-timestep simulation state (GAME-DESIGN.md §13).
 // The sim is decoupled from rendering and NEVER pauses for camera/view changes —
@@ -8,10 +8,10 @@ import { CITY_HP, CITY_POSITIONS, ECONOMY } from "../balance";
 export type Priority = "first" | "strong" | "close";
 export type RoundPhase = "build" | "combat" | "gameover";
 
-export interface City {
+export interface Core {
   index: number;
   pos: THREE.Vector3;
-  hp: number; // CITY_HP → damaged at 1 → destroyed at 0
+  hp: number; // CORE_HP → damaged at 1 → destroyed at 0
 }
 
 export interface Tower {
@@ -35,8 +35,8 @@ export interface EnemyAI {
   vel: THREE.Vector3;
   /** current destination / plunge impact point */
   target: THREE.Vector3;
-  targetKind?: "city" | "tower";
-  targetId?: number; // city index or tower id
+  targetKind?: "core" | "tower";
+  targetId?: number; // core index or tower id
   emitCount?: number;
   emitTimer?: number;
   bombTimer?: number;
@@ -99,7 +99,7 @@ export interface Warhead {
   p2: THREE.Vector3; // impact point (target position, y = 0)
   t: number; // 0..1 flight progress
   duration: number; // seconds for the full arc
-  targetKind: "city" | "tower";
+  targetKind: "core" | "tower";
   targetId: number;
   alive: boolean;
 }
@@ -150,7 +150,7 @@ export interface GameState {
   testCombat: boolean; // dev/test threats run like combat without advancing waves
   roundTime: number;
   pending: PendingSpawn[];
-  cities: City[];
+  cores: Core[];
   towers: Tower[];
   enemies: Enemy[];
   groups: GruntGroup[];
@@ -165,7 +165,7 @@ export interface GameState {
   nextId: number;
   message: string;
   messageTtl: number;
-  citiesDirty: boolean; // city visuals need refresh
+  coresDirty: boolean; // core visuals need refresh
   won: boolean; // wave 50 cleared; freeplay remains available
 }
 
@@ -180,10 +180,10 @@ export function createGameState(): GameState {
     testCombat: false,
     roundTime: 0,
     pending: [],
-    cities: CITY_POSITIONS.map(([x, z], index) => ({
+    cores: CORE_POSITIONS.map(([x, z], index) => ({
       index,
       pos: new THREE.Vector3(x, 0, z),
-      hp: CITY_HP,
+      hp: CORE_HP,
     })),
     // The free T1 battery, pre-placed at map center — dormant until the first
     // volley, unsellable (§2/§3, 2026-07-07 review).
@@ -211,7 +211,7 @@ export function createGameState(): GameState {
     nextId: 2,
     message: "",
     messageTtl: 0,
-    citiesDirty: false,
+    coresDirty: false,
     won: false,
   };
 }
@@ -221,6 +221,6 @@ export function toast(state: GameState, text: string, seconds = 3): void {
   state.messageTtl = seconds;
 }
 
-export function citiesAlive(state: GameState): number {
-  return state.cities.filter((c) => c.hp > 0).length;
+export function coresAlive(state: GameState): number {
+  return state.cores.filter((c) => c.hp > 0).length;
 }

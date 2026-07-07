@@ -1,15 +1,15 @@
-import { CITY_HP, ECONOMY, SCORE, WAVE_GOAL } from "../balance";
+import { CORE_HP, ECONOMY, SCORE, WAVE_GOAL } from "../balance";
 import { UFO } from "../content/enemies";
 import { spawnGruntGroup, updateGroups } from "./enemies";
 import { launchVolley, updateInterceptors, updateWarheads } from "./missiles";
 import { spawnBomber, spawnDiver, spawnMothership, spawnUfo, updateBombs, updateRaiders } from "./raiders";
 import { rand } from "./rng";
-import { citiesAlive, toast, type GameState } from "./state";
+import { coresAlive, toast, type GameState } from "./state";
 import { updateShells, updateTowers } from "./towers";
 import { representativeBossHpScale, representativeMissilesForRound, waveDef, waveSpawns } from "./waves";
 
 // Round flow (GAME-DESIGN.md §3): build freely → START ROUND → combat (building
-// still allowed) → wave clear → city income → build. Player-paced.
+// still allowed) → wave clear → core income → build. Player-paced.
 
 export function startRound(state: GameState): boolean {
   if (state.phase !== "build") return false;
@@ -54,27 +54,27 @@ function checkRoundClear(state: GameState): void {
     toast(state, "TEST THREATS CLEARED", 2);
     return;
   }
-  const survivors = citiesAlive(state);
-  const income = survivors * ECONOMY.cityIncome;
+  const survivors = coresAlive(state);
+  const income = survivors * ECONOMY.coreIncome;
   state.cash += income;
   state.score += SCORE.roundClearPerWave * state.round;
   toast(state, `ROUND ${state.round} CLEAR — INCOME +$${income}`);
 
-  // bonus city at milestones (§8: Missile Command's mercy rule)
+  // bonus core at milestones (§8: Missile Command's mercy rule)
   if (state.round % 10 === 0) {
-    const ruin = state.cities.find((c) => c.hp <= 0);
+    const ruin = state.cores.find((c) => c.hp <= 0);
     if (ruin) {
-      ruin.hp = CITY_HP;
-      state.citiesDirty = true;
-      toast(state, "REINFORCEMENTS — CITY REBUILT", 5);
+      ruin.hp = CORE_HP;
+      state.coresDirty = true;
+      toast(state, "REINFORCEMENTS — CORE REBUILT", 5);
     }
   }
 
   if (state.round === WAVE_GOAL && !state.won) {
     state.won = true;
-    const bonus = survivors * SCORE.wave50CityBonus;
+    const bonus = survivors * SCORE.wave50CoreBonus;
     state.score += bonus;
-    toast(state, `VICTORY — WAVE 50 CLEAR — CITY BONUS +${bonus}`, 8);
+    toast(state, `VICTORY — WAVE 50 CLEAR — CORE BONUS +${bonus}`, 8);
   }
 }
 

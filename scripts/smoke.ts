@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { upgradeCost, upgradeTower } from "../src/sim/actions";
 import { simTick, startRound } from "../src/sim/game";
 import { batteryTier, fireInterceptor, pickBattery, warheadPointAt } from "../src/sim/missiles";
-import { citiesAlive, createGameState, type GameState, type Warhead } from "../src/sim/state";
+import { coresAlive, createGameState, type GameState, type Warhead } from "../src/sim/state";
 import { WAVE_COUNT } from "../src/sim/waves";
 import { TOWER_DEFS } from "../src/content/towers";
 
@@ -117,7 +117,7 @@ while (state.round < WAVE_COUNT || state.phase === "combat") {
   if (state.phase !== lastPhase) {
     console.log(
       `t=${state.simTime.toFixed(1)}s  ${lastPhase}→${state.phase}  round=${state.round}` +
-      `  cash=$${state.cash}  score=${state.score}  cities=${citiesAlive(state)}` +
+      `  cash=$${state.cash}  score=${state.score}  cores=${coresAlive(state)}` +
       `  towers=${state.towers.filter((t) => t.alive).length}  enemies=${state.enemies.length}`,
     );
     lastPhase = state.phase;
@@ -128,8 +128,8 @@ while (state.round < WAVE_COUNT || state.phase === "combat") {
 
 const towers = state.towers.filter((t) => t.alive);
 console.log(`\nDONE round=${state.round} phase=${state.phase} score=${state.score} cash=$${state.cash}`);
-console.log(`cities=${citiesAlive(state)}/6 towers=${towers.length} (tiers: ${towers.map((t) => t.tier + 1).join(",")}) interceptors fired=${shotsFired} wall=${Date.now() - t0}ms`);
-if (state.phase === "gameover") throw new Error("auto-player lost all cities");
+console.log(`cores=${coresAlive(state)}/6 towers=${towers.length} (tiers: ${towers.map((t) => t.tier + 1).join(",")}) interceptors fired=${shotsFired} wall=${Date.now() - t0}ms`);
+if (state.phase === "gameover") throw new Error("auto-player lost all cores");
 if (state.round !== WAVE_COUNT) throw new Error(`stopped at round ${state.round}, expected ${WAVE_COUNT}`);
 if (shotsFired === 0) throw new Error("volleys ran but no interceptors were fired — missile sim broken?");
 console.log("SMOKE TEST PASS");

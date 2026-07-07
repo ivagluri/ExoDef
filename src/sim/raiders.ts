@@ -6,7 +6,7 @@ import { pick, rand, randRange } from "./rng";
 import type { Enemy, EnemyAI, GameState } from "./state";
 
 // Individually-moving enemies (GAME-DESIGN.md §5):
-//   bomber — seeks a city/tower, hovers above it, drops bombs
+//   bomber — seeks a core/tower, hovers above it, drops bombs
 //   diver  — cruises briefly at HIGH, then plunges kamikaze-style
 //   ufo    — harmless high-altitude cash piñata transit
 
@@ -75,15 +75,15 @@ export function spawnMothership(state: GameState, hpScale = 1): void {
 }
 
 /** Pick a structure target; returns false if nothing is left to attack. */
-function acquireTarget(state: GameState, ai: EnemyAI, cityChance: number): boolean {
-  const cities = state.cities.filter((c) => c.hp > 0);
+function acquireTarget(state: GameState, ai: EnemyAI, coreChance: number): boolean {
+  const cores = state.cores.filter((c) => c.hp > 0);
   const towers = state.towers.filter((t) => t.alive);
-  const wantCity = rand() < cityChance ? cities.length > 0 : cities.length > 0 && towers.length === 0;
-  if (wantCity) {
-    const city = pick(cities);
-    ai.targetKind = "city";
-    ai.targetId = city.index;
-    ai.target.copy(city.pos);
+  const wantCore = rand() < coreChance ? cores.length > 0 : cores.length > 0 && towers.length === 0;
+  if (wantCore) {
+    const core = pick(cores);
+    ai.targetKind = "core";
+    ai.targetId = core.index;
+    ai.target.copy(core.pos);
     return true;
   }
   if (towers.length > 0) {
@@ -93,18 +93,18 @@ function acquireTarget(state: GameState, ai: EnemyAI, cityChance: number): boole
     ai.target.copy(tower.pos);
     return true;
   }
-  if (cities.length > 0) {
-    const city = pick(cities);
-    ai.targetKind = "city";
-    ai.targetId = city.index;
-    ai.target.copy(city.pos);
+  if (cores.length > 0) {
+    const core = pick(cores);
+    ai.targetKind = "core";
+    ai.targetId = core.index;
+    ai.target.copy(core.pos);
     return true;
   }
   return false;
 }
 
 function targetAlive(state: GameState, ai: EnemyAI): boolean {
-  if (ai.targetKind === "city") return state.cities[ai.targetId!]?.hp > 0;
+  if (ai.targetKind === "core") return state.cores[ai.targetId!]?.hp > 0;
   if (ai.targetKind === "tower") return state.towers.find((t) => t.id === ai.targetId)?.alive === true;
   return false;
 }
@@ -114,7 +114,7 @@ function updateBomber(state: GameState, enemy: Enemy, dt: number): void {
   if (ai.mode !== "approach" && !targetAlive(state, ai)) ai.mode = "approach";
 
   if (ai.mode === "approach") {
-    if (!targetAlive(state, ai) && !acquireTarget(state, ai, BOMBER.cityTargetChance)) {
+    if (!targetAlive(state, ai) && !acquireTarget(state, ai, BOMBER.coreTargetChance)) {
       return; // nothing left to bomb; drift until the round resolves
     }
     const hover = ai.target.clone().setY(BOMBER.hoverAltitude);
@@ -163,9 +163,9 @@ function updateUfo(enemy: Enemy, dt: number): void {
 }
 
 function randomLiveStructure(state: GameState): THREE.Vector3 | null {
-  const cities = state.cities.filter((c) => c.hp > 0).map((c) => c.pos);
+  const cores = state.cores.filter((c) => c.hp > 0).map((c) => c.pos);
   const towers = state.towers.filter((t) => t.alive).map((t) => t.pos);
-  const targets = [...cities, ...towers];
+  const targets = [...cores, ...towers];
   return targets.length > 0 ? pick(targets) : null;
 }
 

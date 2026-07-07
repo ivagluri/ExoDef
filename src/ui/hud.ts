@@ -3,7 +3,7 @@ import { BUILDABLE, TOWER_DEFS, type TowerTier } from "../content/towers";
 import type { CoordHudInfo, FireScheme } from "../render/coordview";
 import { sellRefund, towerById, upgradeCost } from "../sim/actions";
 import { aliveBatteries, batteryTier, inboundCount } from "../sim/missiles";
-import { citiesAlive, type GameState } from "../sim/state";
+import { coresAlive, type GameState } from "../sim/state";
 import { waveDef } from "../sim/waves";
 
 // HTML overlay HUD (GAME-DESIGN.md §11.1): top bar, build bar, start button,
@@ -187,7 +187,7 @@ export function createHud(handlers: {
       </div>
     </div>
     <div class="gameover" data-el="gameover">
-      ALL CITIES LOST
+      ALL CORES LOST
       <small data-el="finalscore"></small>
       <small>reload the page to try again</small>
     </div>
@@ -284,7 +284,7 @@ export function createHud(handlers: {
       }
       setText(el("cash"), `$${state.cash}`);
       setText(el("round"), state.round === 0 ? "PLACE YOUR DEFENSES" : `ROUND ${state.round}`);
-      setText(el("right"), `⌂ ${citiesAlive(state)}/6 · SCORE ${state.score} · BEST ${bestScore}`);
+      setText(el("right"), `◆ ${coresAlive(state)}/6 · SCORE ${state.score} · BEST ${bestScore}`);
       for (const [id, btn] of buttons) {
         btn.classList.toggle("sel", selection === id);
         setDisabled(btn, state.cash < TOWER_DEFS[id].cost && selection !== id);

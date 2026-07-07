@@ -26,7 +26,7 @@ export const BOMBER = {
   bombPeriod: 4,
   bombFallSpeed: 28,
   bombSplash: 6,
-  cityTargetChance: 0.7,
+  coreTargetChance: 0.7,
 } as const;
 
 export const DIVER = {

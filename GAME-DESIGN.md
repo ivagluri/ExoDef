@@ -2,7 +2,7 @@
 
 **Missile Command × Space Invaders × Tower Defense**
 
-A 3D tower defense on a single rotating isometric map. Alien waves descend from space toward your cities; your towers auto-fire upward. Periodically, enemy missile volleys arc in from over the horizon and the player swings into a dual-viewport "coordinate view" to plot interceptor shots in full 3D — while the ground war keeps running.
+A 3D tower defense on a single rotating orbital defence platform. Alien waves descend from space toward your energy cores; your towers auto-fire upward. Periodically, enemy missile volleys arc in from over the horizon and the player swings into a dual-viewport "coordinate view" to plot interceptor shots in full 3D — while the ground war keeps running.
 
 This document is the buildable spec. It encodes every decision from the design interview (2026-07-07). Numbers marked **[tunable]** are starting values expected to change in playtesting; everything else is a locked design decision. Builder agents should implement from this doc without re-deriving choices.
 
@@ -10,13 +10,13 @@ This document is the buildable spec. It encodes every decision from the design i
 
 ## 1. Vision & pillars
 
-**Pitch:** They are coming from space. You build the ground defense that shoots up at them — and when the missiles launch, you personally step into the war room and plot every interception, knowing the invasion above your map never pauses.
+**Pitch:** They are coming from space. You build the platform defense that shoots up at them — and when the missiles launch, you personally step into the war room and plot every interception, knowing the invasion above your platform never pauses.
 
 **Pillars — when in doubt, decide in favor of these:**
 
 1. **The camera switch is the drama.** One continuous battlefield, two ways of seeing it. The swing from isometric map to coordinate view (and the risky peek back) is the signature moment. Never separate levels, never a paused minigame.
 2. **Deliberate plotting, not twitch.** Interception is a two-input 3D firing solution with no aim assists. Volleys are therefore slow, sparse, and heavy — few warheads, each one deadly.
-3. **The two halves are one game.** Interceptors launch from towers you placed and paid for with TD economy. Enemy missiles hunt the cities your towers defend — and sometimes the batteries themselves.
+3. **The two halves are one game.** Interceptors launch from towers you placed and paid for with TD economy. Enemy missiles hunt the cores your towers defend — and sometimes the batteries themselves.
 4. **Spectre minimalism.** Flat-shaded polygons, bright saturated colors, barren terrain, hard horizon. Nothing on the map but things that matter.
 
 ---
@@ -25,22 +25,22 @@ This document is the buildable spec. It encodes every decision from the design i
 
 Coordinate convention (Three.js): **Y is up**, ground is the XZ plane, origin at map center. Units are abstract "world units" (u).
 
-- Ground: flat 200×200 u plane. Barren — no decoration, no occluders taller than a city (readability rule: the game must read fully from any camera angle).
+- Platform deck: flat 200×200 u plane. Barren — no decoration, no occluders taller than a core (readability rule: the game must read fully from any camera angle).
 - Sky: threats spawn at the top of the ENTRY band and descend.
 
-### Cities — 6, fixed authored positions
+### Cores — 6, fixed authored positions
 
 ```
 top view (200×200 ground, N up)
 
         ┌──────────────────────────┐
-        │            ⌂C5           │   C1 (-60, -40)   C2 ( 60, -40)
-        │   ⌂C3              ⌂C4   │   C3 (-70,  30)   C4 ( 70,  30)
+        │            ◆C5           │   C1 (-60, -40)   C2 ( 60, -40)
+        │   ◆C3              ◆C4   │   C3 (-70,  30)   C4 ( 70,  30)
         │                          │   C5 (  0,  70)   C6 (  0, -75)
         │        (open ground      │
         │         = build area)    │   ◈ = the free starting battery,
-        │   ⌂C1      ◈       ⌂C2   │       pre-placed at map center
-        │            ⌂C6           │
+        │   ◆C1      ◈       ◆C2   │       pre-placed at map center
+        │            ◆C6           │
         └──────────────────────────┘
 ```
 
@@ -77,19 +77,19 @@ Band edges **[tunable]**.
 │         │
 │    last enemy dead/landed → round clear
 │         │
-│    income: +$25 per surviving city  →  loop
+│    income: +$25 per surviving core  →  loop
 └─────────┘
 ```
 
 - **Wave 50 is "the goal."** Clearing it = victory screen. Play continues into endless freeplay escalation for score.
-- One map. Death = last city destroyed → final score, restart.
-- Score = sum of bounties earned + 100 × wave on each clear + 500 per surviving city at wave 50 **[tunable]**.
+- One map. Death = last core destroyed → final score, restart.
+- Score = sum of bounties earned + 100 × wave on each clear + 500 per surviving core at wave 50 **[tunable]**.
 
 ### Starting state
 
 - Cash: **$650 [tunable]**.
 - One **free Missile Battery (T1) pre-placed at map center**, dormant ("asleep") until the first volley's siren. It cannot be sold (it was free — no cash-out), but upgrades and dies like any tower. *(Was player-placed-before-round-1; changed per 2026-07-07 playtest review — the sleeping battery foreshadows the missile waves.)*
-- All 6 cities alive.
+- All 6 cores alive.
 
 ---
 
@@ -146,12 +146,12 @@ interface TowerTier {
 
 Loosely Space-Invaders-inspired: the essence is *descent from above*, not a faithful formation march. Data-driven like towers.
 
-Cities have **2 HP**. Bomb hit = 1, grunt landing = 1, missile warhead = 2 (instant kill). Towers always die to 1 hit.
+Cores have **2 HP**. Bomb hit = 1, grunt landing = 1, missile warhead = 2 (instant kill). Towers always die to 1 hit.
 
 | Enemy | HP | Bounty | Behavior |
 |---|---|---|---|
-| **Grunt** ▼ | 20 | $8 | Wave filler. Spawns in loose groups of 5–9 at ENTRY. The group dives quickly to the formation band (~y=100), then **meanders organically**: anchor wanders on a serpentine heading (steering back when it strays off-map) while sinking continuously with a gentle swell; each member bobs on its own phase. *(Changed from axis-locked drift + discrete step-downs after 2026-07-07 playtest — the literal Space Invaders march read as rigid in 3D.)* On reaching y=0: detonates, destroying towers within 8 u and dealing 1 hit to a city within 8 u. |
-| **Bomber** ◆ | 60 | $25 | Picks a target (city 70% / tower 30%), flies to hover ~30 u above it, drops a bomb every 4s (bomb falls straight down, 1 hit to whatever's beneath, 6 u splash vs towers). Re-targets after destroying its target. The priority kill. |
+| **Grunt** ▼ | 20 | $8 | Wave filler. Spawns in loose groups of 5–9 at ENTRY. The group dives quickly to the formation band (~y=100), then **meanders organically**: anchor wanders on a serpentine heading (steering back when it strays off-map) while sinking continuously with a gentle swell; each member bobs on its own phase. *(Changed from axis-locked drift + discrete step-downs after 2026-07-07 playtest — the literal Space Invaders march read as rigid in 3D.)* On reaching y=0: detonates, destroying towers within 8 u and dealing 1 hit to a core within 8 u. |
+| **Bomber** ◆ | 60 | $25 | Picks a target (core 70% / tower 30%), flies to hover ~30 u above it, drops a bomb every 4s (bomb falls straight down, 1 hit to whatever's beneath, 6 u splash vs towers). Re-targets after destroying its target. The priority kill. |
 | **Diver** ↓ | 15 | $15 | Spawns at HIGH, cruises 3s, then plunges at 40 u/s straight at a random structure. Impact = same as grunt landing. Tests low-altitude reaction coverage. |
 | **Bonus UFO** ◑ | 80 | $150 | Rare (see wave table). Crosses the map at y≈100 (HIGH) at 25 u/s, on screen ~8–10s, harms nothing. Cash piñata — in v1 only T3 flak clips it; it mainly advertises the beam tower expansion. |
 | **Mothership (boss)** ⬢ | ~1500 [tunable] | $500 | **Boss stages** (added 2026-07-07, user idea): waves 15/30/45 are boss waves. One mega enemy — a huge slow hulk that descends gradually while **periodically emitting small enemies** (grunt clusters, occasional divers) from its underside. Long fight but not a bullet sponge: big hull = every tower connects, so time-to-kill stays reasonable [tunable in playtest]. Killing it ends the emission stream; if it reaches low altitude it becomes a slow roaming disaster (heavy bomb drops) rather than instantly detonating. Escalates per appearance (HP, emission rate). Wave 50 finale = mothership + max volley simultaneously. |
@@ -176,9 +176,9 @@ interface EnemyDef {
 Warheads are ballistic — launched from beyond the horizon, they arc **over the map edge and descend** toward targets. Each volley:
 
 - Comes from one random compass direction (the volley's **heading**).
-- Consists of N warheads (§ composition below), staggered 1.5–3s apart, each targeting a specific structure: **cities**, or in a **counterforce volley** (wave 15+, 25% of volleys) the player's **batteries**.
+- Consists of N warheads (§ composition below), staggered 1.5–3s apart, each targeting a specific structure: **cores**, or in a **counterforce volley** (wave 15+, 25% of volleys) the player's **batteries**.
 - Warhead flight: enters at ENTRY top (y=160) on a shallow arc, total time overhead **~30s [tunable]** — slow, visible, heavy. Speed increases modestly with wave (§9). Entry depth is fixed **just beyond the platform edge** on the approach side (~140 u out [tunable]), not a fixed distance behind each target — so the coordinate view's top viewport (which extends further on the approach side than the far side) has every warhead in frame from launch. *(Changed per 2026-07-07 playtest: spawns 260 u behind targets were invisible in the top view for half their flight.)*
-- A warhead that reaches its target: city −2 HP (destroyed), tower destroyed, 12 u splash destroys adjacent towers.
+- A warhead that reaches its target: core −2 HP (destroyed), tower destroyed, 12 u splash destroys adjacent towers.
 
 ### 6.2 Alert & mode transition
 
@@ -207,11 +207,11 @@ Two orthographic viewports of the live scene, stacked, with the **lateral axis a
 │      ╲   ╲    ╲                            │   perpendicular to volley
 │       ╲ ⊕ ╲    ╲      ← warhead arcs       │   heading; sees lateral (u)
 │        ╲   ╲    ╲                          │   × altitude (y)
-│   ⌂──▲──◈──⌂───⌂──  ground strip           │
+│   ◆──▲──◈──◆───◆──  ground strip           │
 ├────────────────────────────────────────────┤
 │  TOP VIEW (30% height)                     │   camera: straight down;
 │      ·    ×     ·      ← warheads (plan)   │   sees lateral (u) ×
-│   ⌂    ⊙◈    ⌂    ⌂                        │   depth (v)
+│   ◆    ⊙◈    ◆    ◆                        │   depth (v)
 └────────────────────────────────────────────┘
    ⊕/⊙ = the two crosshairs (one 3D point)      HUD: ammo ▪▪▪▪▪▫, battery list
 ```
@@ -245,10 +245,10 @@ Scheme B:  clicks: C ← merge(C, click)     SPACE: if batteryReady → FIRE at 
 
 ### 6.6 Volley composition
 
-- First volley: **wave 5** (2 warheads, cities only — the tutorial volley).
+- First volley: **wave 5** (2 warheads, cores only — the tutorial volley).
 - Warheads per volley: `2 + floor((wave − 5) / 4)`, capped at **8 [tunable]**.
 - Volleys occur on scheduled waves (§9 table; roughly every 3–4 waves).
-- Counterforce volleys (target batteries instead of cities): from wave 15, 25% chance per volley **[tunable]**.
+- Counterforce volleys (target batteries instead of cores): from wave 15, 25% chance per volley **[tunable]**.
 
 ---
 
@@ -312,25 +312,25 @@ Warhead trajectories are deterministic arcs (precomputed control points, e.g. a 
 
 | Event | Effect |
 |---|---|
-| Invader bomb / grunt landing / diver impact | 1 hit to city beneath (cities have 2 HP); destroys towers in splash |
-| Missile warhead impact | City destroyed outright (2 hits); tower destroyed + 12 u splash |
+| Invader bomb / grunt landing / diver impact | 1 hit to core beneath (cores have 2 HP); destroys towers in splash |
+| Missile warhead impact | Core destroyed outright (2 hits); tower destroyed + 12 u splash |
 | Tower destroyed | Gone; rebuild at full price. No salvage from destruction (sell alive = 70% back) |
-| City destroyed | Lasting scar: −$25/round income, closer to game over |
-| **Bonus city** | At waves 10/20/30/40/50: one destroyed city is rebuilt (if any) **[tunable]** — Missile Command's mercy rule; prevents death spirals across the 50-wave run |
-| All cities destroyed | Game over |
+| Core destroyed | Lasting scar: −$25/round income, closer to game over |
+| **Bonus core** | At waves 10/20/30/40/50: one destroyed core is rebuilt (if any) **[tunable]** — Missile Command's mercy rule; prevents death spirals across the 50-wave run |
+| All cores destroyed | Game over |
 
 ### Economy (starting numbers, all **[tunable]**)
 
 | Source | Amount |
 |---|---|
 | Starting cash | $650 (+ free T1 battery pre-placed at center) |
-| City income | $25 / city / round |
+| Core income | $25 / core / round |
 | Grunt / Diver / Bomber / UFO | $8 / $15 / $25 / $150 |
 | Intercepted warhead | $30 |
 
 *(The early-start bonus was cut per 2026-07-07 playtest: unnecessary. Same playtest flagged the economy as **too generous overall** — tighten in the Phase 6 balance pass.)*
 
-Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 city income) affords the second tower by round 2 and ~$1000 by round 5's first volley — enough for a battery T2 upgrade OR a saved cushion. Builder agents: keep this doc's table as the single source; put numbers in one `balance.ts`.
+Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 core income) affords the second tower by round 2 and ~$1000 by round 5's first volley — enough for a battery T2 upgrade OR a saved cushion. Builder agents: keep this doc's table as the single source; put numbers in one `balance.ts`.
 
 ---
 
@@ -349,7 +349,7 @@ Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 city income) afford
 | 7 | 14 grunts + 1 bomber + 2 divers | diver intro |
 | 8 | 20 grunts + 2 bombers + 2 divers | |
 | 9 | 12 grunts + 1 bomber | **☄ 3 warheads** |
-| 10 | 24 grunts + 3 bombers + 3 divers | **milestone: bonus city** |
+| 10 | 24 grunts + 3 bombers + 3 divers | **milestone: bonus core** |
 | 11 | 20 grunts + 2 bombers + 4 divers | |
 | 12 | 18 grunts + 3 bombers | **☄ 3 warheads** |
 | 13 | 28 grunts + 4 bombers + 4 divers | |
@@ -361,7 +361,7 @@ Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 city income) afford
 - Enemy HP × `1.04^(wave−15)`; group counts +8% / wave (rounded); grunt descent speed +1% / wave **[tunable]**.
 - **Spawn delivery loosens with wave** (2026-07-07 playtest): early waves arrive in tight batches (good), but later waves should feel irregular and "random attack"-like — same volume, spread-out staggered timing. Implement as a spawn-jitter/spread parameter in the formula generator that scales with wave number (it may retroactively loosen waves ~10–15 too).
 - Volley every 3–4 waves; warheads `2 + floor((wave−5)/4)` cap 8; counterforce chance 25%.
-- Bonus city at each ×10 milestone.
+- Bonus core at each ×10 milestone.
 - **Boss stages at 15/30/45**: mothership replaces the normal ground wave, escalating each time (HP, emission rate, emitted enemy mix).
 - Wave 50: authored finale — **mothership + max volley** (8, mixed counterforce) simultaneously. Victory screen after.
 
@@ -407,7 +407,7 @@ Gamepad: out of scope v1 (backlog §14).
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│ $1,240   ⌂⌂⌂⌂⌂░ 5/6   ROUND 11        score 18,450  │ ← top bar
+│ $1,240   ◆◆◆◆◆░ 5/6   ROUND 11        score 18,450  │ ← top bar
 │                                                      │
 │                 [ 3D map viewport ]                  │
 │                                                      │
@@ -423,7 +423,7 @@ Gamepad: out of scope v1 (backlog §14).
 ### 11.2 Build & upgrade flow
 
 - Click build-bar tower (or 1/2/3) → ghost follows cursor with **range dome** (translucent sphere cap showing radius + altitude ceiling). Green = valid, red = invalid. Click to place, ESC cancels.
-- Placement invalid: overlapping city, tower, or map edge. Everything else is open ground (free placement — layout is the strategy).
+- Placement invalid: overlapping core, tower, or map edge. Everything else is open ground (free placement — layout is the strategy).
 - Click a placed tower → panel: tier, upgrade button + cost, sell (70%), targeting priority cycle.
 
 ### 11.3 Coordinate-view HUD
@@ -458,7 +458,7 @@ ALT                       axes: X = lateral position relative to the
 |---|---|
 | Ground | Single flat pale sand-gray plane; thin darker grid lines acceptable if readability wants them |
 | Sky | Near-black navy, hard horizon line, sparse white star points |
-| Cities | White/cyan block clusters (3–6 boxes each); damaged = half the boxes gone |
+| Cores | White/cyan energy-core clusters (3–6 blocks each); damaged = half the blocks gone plus red flicker |
 | Towers | Bright primaries: gun = yellow, flak = orange, battery = cyan; ≤ 150 triangles each |
 | Enemies | Grunt = magenta octahedron-ish; bomber = green wedge; diver = red dart; UFO = classic silver disc |
 | Warheads / trails | White point + solid red ribbon trail (the Missile Command signature); interceptor trails white |
@@ -466,7 +466,7 @@ ALT                       axes: X = lateral position relative to the
 
 Rule: if an object doesn't carry gameplay information, it doesn't exist.
 
-**Audio** (minimal retro synth, WebAudio-generated or tiny samples): the **siren is the star** — a proper rising air-raid wail owns the mode switch. Plus: gun tick, flak thump, launch whoosh, blast boom (pitch scales with kills in one blast), city-death low drone, round-clear sting, UFO warble (the homage). No music in v1 beyond a menu drone **[tunable]**.
+**Audio** (minimal retro synth, WebAudio-generated or tiny samples): the **siren is the star** — a proper rising air-raid wail owns the mode switch. Plus: gun tick, flak thump, launch whoosh, blast boom (pitch scales with kills in one blast), core-death low drone, round-clear sting, UFO warble (the homage). No music in v1 beyond a menu drone **[tunable]**.
 
 ---
 
@@ -502,8 +502,8 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 - **Converging volleys — multiple headings in one volley** (2026-07-07, user): warheads closing on the cores from several compass directions simultaneously. Today every volley already comes from a random direction, but all warheads *within* a volley share it — the coordinate view's whole frame (§7.1) and the top view's approach-side overage assume one heading. Multi-heading needs a view rethink: per-heading sub-volleys the player cycles between, or a symmetric top view with a rotating frame. Good candidate for a late-game/freeplay escalation once the basic plotting loop is proven.
 - Gamepad support (twin-stick aiming maps beautifully to the two-viewport scheme)
 - Campaign / multiple maps, meta-progression
-- **Orbital-platform reframe + bypass lives** (2026-07-07, user): the battlefield is an orbital platform — the "cities" are support pillars / energy cores. Losing all of them isn't instant death: a Bloons-TD-style lives pool where only a certain number of enemies can bypass before it's over. Changes the loss condition (§3/§8); needs its own design pass.
-- ~~Branding to match the reframe~~ **DONE 2026-07-07**: retitled **EXODEF** (user's pick, distilled from "Exosphere Defence"); the playfield carries an **EXODEF COMMAND** mark vector-arcade style (HUD tag, bottom-left). Remaining for the orbital-platform design pass: rewrite the fiction copy (§1 pitch, city→core naming) when that reframe lands.
+- **Bypass lives / platform integrity** (2026-07-07, user): now that the battlefield is an orbital defence platform, a later design pass could replace "all cores destroyed = death" with a Bloons-TD-style lives pool where only a certain number of enemies can bypass before it's over. Changes the loss condition (§3/§8); not part of v1.
+- ~~Branding to match the reframe~~ **DONE 2026-07-07**: retitled **EXODEF** (user's pick, distilled from "Exosphere Defence"); the playfield carries an **EXODEF COMMAND** mark vector-arcade style (HUD tag, bottom-left). Core/platform language is now the standard fiction.
 
 **Weapon ideas from the 2026-07-07 playtest (backlog; curate 2–3 winners after Phase 4 ships — notes preserved verbatim):**
 - **Frag bomb** — (no further notes yet)

@@ -3,8 +3,8 @@
 
 export const MAP_SIZE = 200; // ground is MAP_SIZE × MAP_SIZE world units, centered at origin
 
-// GAME-DESIGN.md §2 — six cities, fixed authored positions (x, z)
-export const CITY_POSITIONS: ReadonlyArray<readonly [number, number]> = [
+// GAME-DESIGN.md §2 — six cores, fixed authored positions (x, z)
+export const CORE_POSITIONS: ReadonlyArray<readonly [number, number]> = [
   [-60, -40],
   [60, -40],
   [-70, 30],
@@ -40,8 +40,8 @@ export const PALETTE = {
   sky: 0x070b18,
   ground: 0xb5b09c,
   grid: 0x9d987f,
-  cityWhite: 0xf4f6f8,
-  cityCyan: 0x35e0e8,
+  coreWhite: 0xf4f6f8,
+  coreCyan: 0x35e0e8,
   star: 0xffffff,
 } as const;
 
@@ -50,14 +50,14 @@ export const SIM_HZ = 60; // fixed-timestep simulation rate (GAME-DESIGN.md §13
 // GAME-DESIGN.md §8 — economy [tunable]
 export const ECONOMY = {
   startingCash: 650,
-  cityIncome: 25, // per surviving city per round
+  coreIncome: 25, // per surviving core per round
   sellRefund: 0.7,
 } as const;
 
 // GAME-DESIGN.md §3 — score
 export const SCORE = {
   roundClearPerWave: 100,
-  wave50CityBonus: 500,
+  wave50CoreBonus: 500,
 } as const;
 
 // GAME-DESIGN.md §9 — wave arc and formula scaling [tunable]
@@ -94,7 +94,7 @@ export const WAVE_SCALING = {
 export const PLACEMENT = {
   footprintRadius: 6,
   minTowerGap: 13, // center-to-center
-  cityClearance: 15,
+  coreClearance: 15,
   buildableHalf: 92, // |x|,|z| limit for tower centers
 } as const;
 
@@ -117,11 +117,11 @@ export const GRUNT = {
   // says waves "spend most of their descent" in MID.
   entryDiveSpeed: 18, // u/s while above formationTop
   formationTop: 100,
-  detonateRadius: 8, // landing blast vs towers/cities
+  detonateRadius: 8, // landing blast vs towers/cores
 } as const;
 
-export const CITY_HP = 2; // bomb/landing = 1 hit, warhead = 2 (§8)
-export const CITY_RADIUS = 8; // for hit tests
+export const CORE_HP = 2; // bomb/landing = 1 hit, warhead = 2 (§8)
+export const CORE_RADIUS = 8; // for hit tests
 
 // GAME-DESIGN.md §5/§9 — mothership boss stages [tunable]
 export const MOTHERSHIP = {

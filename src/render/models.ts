@@ -28,7 +28,7 @@ export const MODEL_COLORS = {
   warheadTrail: 0xff2b2b, // the Missile Command signature (§12)
   interceptor: 0xe8fdff,
   interceptorTrail: 0x9fe8ee,
-  rangeDome: PALETTE.cityCyan,
+  rangeDome: PALETTE.coreCyan,
 } as const;
 
 export type BlastVisual = "intercept" | "flak" | "impact" | "bossBay";

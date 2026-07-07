@@ -1,12 +1,12 @@
 import * as THREE from "three";
-import { CITY_POSITIONS, MAP_SIZE, PALETTE } from "../balance";
+import { CORE_POSITIONS, MAP_SIZE, PALETTE } from "../balance";
 
 export interface World {
   scene: THREE.Scene;
-  cities: THREE.Group[];
+  cores: THREE.Group[];
 }
 
-// Deterministic pseudo-random for city layouts (stable across sessions)
+// Deterministic pseudo-random for core layouts (stable across sessions)
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
   return () => {
@@ -17,17 +17,18 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function buildCity(index: number): THREE.Group {
+function buildCore(index: number): THREE.Group {
   const rand = mulberry32(1000 + index * 77);
   const group = new THREE.Group();
   const blocks: THREE.Mesh[] = [];
-  const blockCount = 3 + Math.floor(rand() * 4); // 3–6 boxes per city
+  const baseColors: number[] = [];
+  const blockCount = 3 + Math.floor(rand() * 4); // 3–6 boxes per core
   for (let i = 0; i < blockCount; i++) {
     const w = 4 + rand() * 5;
     const d = 4 + rand() * 5;
     const h = 6 + rand() * 9;
-    // one cyan accent block per city, rest white
-    const color = i === 0 ? PALETTE.cityCyan : PALETTE.cityWhite;
+    // one cyan accent block per core, rest white
+    const color = i === 0 ? PALETTE.coreCyan : PALETTE.coreWhite;
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(w, h, d),
       new THREE.MeshLambertMaterial({ color }),
@@ -37,9 +38,10 @@ function buildCity(index: number): THREE.Group {
     mesh.position.set(Math.cos(angle) * r, h / 2, Math.sin(angle) * r);
     group.add(mesh);
     blocks.push(mesh);
+    baseColors.push(color);
   }
   const glowMat = new THREE.MeshBasicMaterial({
-    color: PALETTE.cityCyan,
+    color: PALETTE.coreCyan,
     transparent: true,
     opacity: 0.12,
     depthWrite: false,
@@ -49,6 +51,7 @@ function buildCity(index: number): THREE.Group {
   glow.position.y = 2.6;
   group.add(glow);
   group.userData.blocks = blocks;
+  group.userData.baseColors = baseColors;
   group.userData.glow = glow;
   group.userData.glowMat = glowMat;
   return group;
@@ -106,13 +109,13 @@ export function createWorld(): World {
 
   scene.add(buildStars());
 
-  const cities: THREE.Group[] = [];
-  CITY_POSITIONS.forEach(([x, z], i) => {
-    const city = buildCity(i);
-    city.position.set(x, 0, z);
-    scene.add(city);
-    cities.push(city);
+  const cores: THREE.Group[] = [];
+  CORE_POSITIONS.forEach(([x, z], i) => {
+    const core = buildCore(i);
+    core.position.set(x, 0, z);
+    scene.add(core);
+    cores.push(core);
   });
 
-  return { scene, cities };
+  return { scene, cores };
 }
