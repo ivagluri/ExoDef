@@ -95,7 +95,12 @@ export const CITY_RADIUS = 8; // for hit tests
 // GAME-DESIGN.md §6 — missile volleys & interception [tunable]
 export const VOLLEY = {
   entryY: 160, // warheads become visible at ENTRY top
-  entryBackDist: 260, // launch point distance behind target along the heading
+  // Entry sits just beyond the platform edge on the approach side (playtest
+  // 2026-07-07: the old fixed 260u-behind-target spawn kept warheads outside
+  // the top view for half their flight). The top view extends further on the
+  // approach side to keep this corridor in frame.
+  entryOffset: 140, // entry depth (volley-frame v = -entryOffset)
+  minApproach: 60, // targets near the back edge still get this much approach run
   entryLateralJitter: 18, // per-warhead sideways spread within the volley
   arcPeakY: 105, // bézier control-point altitude (shallow over-horizon arc)
   flightTime: 30, // seconds overhead at wave 5

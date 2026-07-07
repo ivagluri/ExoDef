@@ -80,15 +80,24 @@ function launchWarhead(state: GameState): void {
   const heading = volley.heading;
   const lateral = new THREE.Vector3(-heading.z, 0, heading.x);
   const p2 = target.pos.clone().setY(0);
-  const p0 = p2.clone()
-    .addScaledVector(heading, -VOLLEY.entryBackDist)
-    .addScaledVector(lateral, randRange(-VOLLEY.entryLateralJitter, VOLLEY.entryLateralJitter))
+  // Entry at a fixed depth just past the platform edge (volley frame v =
+  // -entryOffset), not a fixed distance behind the target — keeps every
+  // warhead inside the top view's approach corridor from launch.
+  const targetU = p2.dot(lateral);
+  const targetV = p2.dot(heading);
+  const entryV = Math.min(-VOLLEY.entryOffset, targetV - VOLLEY.minApproach);
+  const p0 = new THREE.Vector3()
+    .addScaledVector(lateral, targetU + randRange(-VOLLEY.entryLateralJitter, VOLLEY.entryLateralJitter))
+    .addScaledVector(heading, entryV)
     .setY(VOLLEY.entryY);
   const p1 = p0.clone().lerp(p2, 0.55).setY(VOLLEY.arcPeakY);
-  const duration = Math.max(
+  // ~flightTime for a full crossing, proportionally less for closer targets,
+  // modest speed-up with wave (§9)
+  const base = Math.max(
     VOLLEY.flightTimeMin,
     VOLLEY.flightTime - VOLLEY.flightTimeDropPerWave * Math.max(0, state.round - 5),
   );
+  const duration = Math.max(VOLLEY.flightTimeMin, base * Math.min(1, (targetV - entryV) / 200));
   state.warheads.push({
     id: state.nextId++,
     pos: p0.clone(),

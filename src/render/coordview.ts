@@ -16,7 +16,11 @@ const TRANSITION = 0.6; // §6.2 camera swing
 const SIDE_FRACTION = 0.7; // side viewport height share
 const Y_CENTER = 82; // side view vertical center (shows y ≈ -8..172)
 const Y_HALF = 90;
-const V_HALF = 115; // top view depth half-extent (compressed to fit the map)
+// Top view depth is asymmetric (playtest 2026-07-07): extra room on the
+// approach side (-v) so warheads are in frame from their entry point; the
+// platform plus a little overage on the far side.
+const V_BACK = 165; // approach-side extent (covers entryOffset + jitter)
+const V_FRONT = 115; // far-side extent
 const SCHEME_KEY = "skyfall.fireScheme";
 
 export interface CoordHudInfo {
@@ -208,7 +212,7 @@ export class CoordinateView {
       const ny = 1 - 2 * ((ev.clientY - sideH) / (H - sideH));
       p.set(nx, ny, 0).unproject(this.topCam);
       this.C.u = p.dot(this.right);
-      this.C.v = THREE.MathUtils.clamp(p.dot(this.fwd), -V_HALF, V_HALF);
+      this.C.v = THREE.MathUtils.clamp(p.dot(this.fwd), -V_BACK, V_FRONT);
       this.freshTop = true;
     }
     if (this.scheme === "plotted" && this.freshSide && this.freshTop) {
@@ -255,13 +259,17 @@ export class CoordinateView {
     side.updateProjectionMatrix();
 
     const top = this.topCam;
+    // depth is compressed and asymmetric; only the lateral axis is 1:1.
+    // Shift the camera along -fwd so the frustum spans [-V_BACK, +V_FRONT].
+    const vCenter = (V_FRONT - V_BACK) / 2;
+    const vHalf = (V_FRONT + V_BACK) / 2;
     top.left = -uHalf;
     top.right = uHalf;
-    top.top = V_HALF; // depth is compressed; only the lateral axis is 1:1
-    top.bottom = -V_HALF;
+    top.top = vHalf;
+    top.bottom = -vHalf;
     top.up.copy(this.fwd); // screen-x = frame.right in both views (§7.1)
-    top.position.set(0, 500, 0);
-    top.lookAt(0, 0, 0);
+    top.position.set(this.fwd.x * vCenter, 500, this.fwd.z * vCenter);
+    top.lookAt(this.fwd.x * vCenter, 0, this.fwd.z * vCenter);
     top.updateProjectionMatrix();
   }
 

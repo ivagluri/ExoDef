@@ -177,7 +177,7 @@ Warheads are ballistic — launched from beyond the horizon, they arc **over the
 
 - Comes from one random compass direction (the volley's **heading**).
 - Consists of N warheads (§ composition below), staggered 1.5–3s apart, each targeting a specific structure: **cities**, or in a **counterforce volley** (wave 15+, 25% of volleys) the player's **batteries**.
-- Warhead flight: enters at ENTRY top (y=160) on a shallow arc, total time overhead **~30s [tunable]** — slow, visible, heavy. Speed increases modestly with wave (§9).
+- Warhead flight: enters at ENTRY top (y=160) on a shallow arc, total time overhead **~30s [tunable]** — slow, visible, heavy. Speed increases modestly with wave (§9). Entry depth is fixed **just beyond the platform edge** on the approach side (~140 u out [tunable]), not a fixed distance behind each target — so the coordinate view's top viewport (which extends further on the approach side than the far side) has every warhead in frame from launch. *(Changed per 2026-07-07 playtest: spawns 260 u behind targets were invisible in the top view for half their flight.)*
 - A warhead that reaches its target: city −2 HP (destroyed), tower destroyed, 12 u splash destroys adjacent towers.
 
 ### 6.2 Alert & mode transition
