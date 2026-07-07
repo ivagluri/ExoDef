@@ -56,19 +56,27 @@ export function createRadar(): Radar {
     draw(state: GameState, right: THREE.Vector3): void {
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
-      // altitude band ticks (§2)
-      ctx.strokeStyle = "#3a456866";
-      ctx.fillStyle = "#7f8fc599";
+      // altitude band ticks (§2) — bright enough to read over the dark bg
+      // (playtest 2026-07-07: original 40%-alpha lines were invisible)
       ctx.font = "8px Menlo, monospace";
       ctx.lineWidth = 1;
       for (const alt of [BANDS.landingTop, BANDS.lowTop, BANDS.midTop, BANDS.highTop, BANDS.entryTop]) {
-        const y = toY(alt);
+        const y = toY(alt) + 0.5; // crisp 1px line
+        ctx.strokeStyle = "#55639a";
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(WIDTH, y);
         ctx.stroke();
+        ctx.fillStyle = "#a9b6e0";
         ctx.fillText(String(alt), 3, y + 8);
       }
+      // ground line
+      ctx.strokeStyle = "#8b96c4";
+      ctx.beginPath();
+      ctx.moveTo(0, HEIGHT - 0.5);
+      ctx.lineTo(WIDTH, HEIGHT - 0.5);
+      ctx.stroke();
+      ctx.fillStyle = "#a9b6e0";
       ctx.fillText("RADAR", WIDTH - 34, 10);
 
       // grunts first (background texture), raiders, then warheads on top
