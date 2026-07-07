@@ -11,9 +11,9 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 5 IN PROGRESS — plotted-only interception after playtest; optional beam/radar towers remain deferred** (updated 2026-07-07)
+**Status: Phase 6 COMPLETE — roster expansion + core repair implemented; user playtest next** (updated 2026-07-07)
 
-> **Resume here (fresh context):** read GAME-DESIGN.md first. Waves 16–50/freeplay/victory, bonus cores, mothership boss stages, WebAudio cues, settings, local high score, upgrade preview, art/readability pass, core/platform terminology, and plotted-only interception are implemented. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is titled **EXODEF**. Still open from §15: Phase 6 tuning items.
+> **Resume here (fresh context):** read GAME-DESIGN.md first. Waves 16–50/freeplay/victory, bonus cores, mothership boss stages, WebAudio cues, settings, local high score, upgrade preview, art/readability pass, core/platform terminology, plotted-only interception, Phase 6 tower expansion, and paid damaged-core repair are implemented. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is titled **EXODEF**. Balance tuning is deliberately deferred until the expanded roster settles.
 
 ---
 
@@ -76,7 +76,7 @@ Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additi
 
 **DoD:** waves 1–15 fully playable including real volleys at 5/9/12/15; counterforce at 15 threatens batteries; plotted side+top click aiming works. *(Verified headless — auto-player leads + intercepts all 12 warheads, 6/6 cores — and user-playtested 2026-07-07; the radar and top-view findings from that playtest are fixed, see session log.)*
 
-## Phase 5 — Full arc & polish
+## Phase 5 — Full arc & polish ✅ (2026-07-07)
 
 - [x] Formula waves 16–50 + authored wave-50 finale + victory screen; freeplay 51+ (§9)
 - [x] Spawn-spread parameter: delivery gets irregular/staggered as waves rise, same volume (§9, playtest 2026-07-07) — may retroactively loosen waves ~10–15
@@ -87,18 +87,21 @@ Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additi
 - [x] Settings panel (game speed; volume; visual test buttons)
 - [x] localStorage high score
 - [x] Upgrade preview: tower panel shows what the next tier actually changes (dps/range/alt deltas) — playtest feedback 2026-07-07, backburnered from Phase 3
-- [ ] Beam + radar towers IF budget allows (else backlog, §14)
+- [x] Close Phase 5 cut-line: beam/radar towers moved to backlog; persistent HUD radar already covers the v1 radar/readability need
 
 **DoD:** complete game per design doc, playable start → wave 50 → freeplay.
 
-## Phase 6 — Balance & playtest pass
+## Phase 6 — Roster expansion & core repair
 
-Driven by user playtests against GAME-DESIGN.md §15's open questions. No new systems — tuning `balance.ts` and fixing feel issues.
+Roster stabilization before serious balance tuning. Adds low-risk tower concepts from the preserved backlog plus an explicit damaged-core repair action.
 
-Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
-- Economy is too generous — tighten income/bounties/costs together
-- Stronger-enemy volume too low as stages progress (grunt swarms stay too easy); lever undecided: wave composition vs. enemy strength vs. economy
-- Battery upgrade direction: bigger blast radius vs. fan-shot (§15 Q7).  further ideas: first upgrade, "persist" blast (couple seconds burn zone so accuracy is less critical), second upgrade, "cluster warhead", explodes in a 3-d triangular diamond shape, 4 blast points, costly upgrade as it would greatly decrease accuracy requirement.
+- [x] Repulsor Beam tower: applies an upward-retreat debuff to normal invaders, then retargets after a cooldown; upgrades improve cooldown/duration/lift; no warhead or boss effect
+- [x] AA Missile tower: automatic slow guided anti-invader missiles with long reach; never targets enemy warheads
+- [x] Drone Launcher tower: persistent reusable drones; tier upgrades increase active drone cap and flexible DPS
+- [x] Paid core repair: click a surviving damaged core and spend $300 to restore it to full; destroyed cores still require milestone rebuilds
+- [x] Six-tower build bar with reused tower-model previews; static by default, rotate on hover/selection
+
+**DoD:** new towers are buildable/upgradable, repair works during combat, enemy warhead interception remains purely player-plotted, and `npm run build` + `npm run smoke` pass. User browser playtest decides follow-up fixes.
 
 ---
 
@@ -108,7 +111,10 @@ Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
 
 ## Backlog notes
 
-- Should cores become repairable later? Defer to Phase 6+ balance discussion; not part of the Phase 5 readability pass.
+- Economy is too generous — tighten income/bounties/costs together after the expanded roster stabilizes.
+- Stronger-enemy volume too low as stages progress; decide later between composition, enemy strength, and economy levers.
+- Battery upgrade direction: bigger blast radius vs. fan-shot/persistent blast/cluster warhead; defer until roster playtest.
+- Radar tower is not active scope because the persistent HUD radar satisfies the readability need.
 
 ## Session log
 
@@ -127,3 +133,4 @@ Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
 - **2026-07-07 (Phase 5 art/readability pass)** — Implemented focused gameplay-readability polish: warheads now use larger white points plus solid red mesh ribbon trails; interceptors use shorter cyan-white trails and cyan blasts; ground/warhead impacts use warm red-orange blast spheres; core clusters have healthy cyan pulse and damaged red flicker while destroyed clusters remain dark; mothership emissions moved to visible side bays with brief flashes; bombs and mothership side bays got silhouette/readability tweaks; radar/crosshair/preview contrast tuned. Added secondary HUD settings buttons for `TEST MISSILES` and `TEST BOSS`; test threats run through normal sim damage/bounties without advancing round progression or granting round-clear income.
 - **2026-07-07 (core terminology cleanup)** — Standardized the project around the orbital defence platform / energy core fiction. User-facing HUD, toasts, docs, balance constants, sim state, targeting, render sync, placement rules, smoke output, and audio cue names now use core terminology. The temporary damaged-core debug start was removed after user verification.
 - **2026-07-07 (aiming simplification)** — Removed the plot+commit/SPACE firing scheme after user playtest found base-speed gameplay too quick for a separate confirm step. Coordinate view now always uses plotted side+top click pairs; settings/localStorage no longer carry a fire scheme; HUD/docs updated.
+- **2026-07-07 (Phase 6 roster expansion)** — Closed Phase 5 cut-line and moved balance tuning to backlog until the roster stabilizes. Added Repulsor Beam (upward-retreat debuff applicator), AA Missile (automatic anti-invader guided missiles, never warheads), Drone Launcher (persistent capped drones), paid damaged-core repair ($300, surviving cores only), six-tower build bar, and hover-rotating tower-model picker previews. Expanded smoke with Phase 6 mechanic assertions. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cores.

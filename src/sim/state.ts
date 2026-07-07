@@ -51,6 +51,7 @@ export interface Enemy {
   alive: boolean;
   groupId: number | null;
   ai?: EnemyAI;
+  repulse?: { ttl: number; liftSpeed: number };
 }
 
 export interface Bomb {
@@ -67,6 +68,7 @@ export interface GruntGroup {
   heading: number; // radians, XZ plane
   wanderSeed: number; // per-group phase for the serpentine wander
   speedScale: number;
+  repulse?: { ttl: number; liftSpeed: number };
   /** enemy id → formation offset (+ per-member wobble phase) */
   members: { enemyId: number; dx: number; dz: number; phase: number }[];
 }
@@ -81,11 +83,29 @@ export interface Shell {
   alive: boolean;
 }
 
+export interface AAMissile {
+  id: number;
+  pos: THREE.Vector3;
+  targetId: number;
+  speed: number;
+  damage: number;
+  alive: boolean;
+}
+
+export interface Drone {
+  id: number;
+  towerId: number;
+  pos: THREE.Vector3;
+  targetId: number | null;
+  cooldown: number;
+  alive: boolean;
+}
+
 /** Transient render-only effects, produced by the sim, aged by the sim. */
 export type BlastKind = "flak" | "impact" | "bossBay";
 
 export interface Effects {
-  tracers: { from: THREE.Vector3; to: THREE.Vector3; ttl: number }[];
+  tracers: { from: THREE.Vector3; to: THREE.Vector3; ttl: number; kind?: "gun" | "repulsor" | "drone" }[];
   blasts: { pos: THREE.Vector3; radius: number; ttl: number; maxTtl: number; kind?: BlastKind }[];
 }
 
@@ -155,6 +175,8 @@ export interface GameState {
   enemies: Enemy[];
   groups: GruntGroup[];
   shells: Shell[];
+  aaMissiles: AAMissile[];
+  drones: Drone[];
   bombs: Bomb[];
   volley: Volley | null;
   warheads: Warhead[];
@@ -201,6 +223,8 @@ export function createGameState(): GameState {
     enemies: [],
     groups: [],
     shells: [],
+    aaMissiles: [],
+    drones: [],
     bombs: [],
     volley: null,
     warheads: [],

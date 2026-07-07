@@ -1,6 +1,8 @@
-import { WAVE_GOAL } from "../balance";
+import * as THREE from "three";
+import { CORE_HP, ECONOMY, WAVE_GOAL } from "../balance";
 import { BUILDABLE, TOWER_DEFS, type TowerTier } from "../content/towers";
 import type { CoordHudInfo } from "../render/coordview";
+import { makeTowerModel } from "../render/models";
 import { sellRefund, towerById, upgradeCost } from "../sim/actions";
 import { aliveBatteries, batteryTier, inboundCount } from "../sim/missiles";
 import { coresAlive, type GameState } from "../sim/state";
@@ -10,7 +12,7 @@ import { waveDef } from "../sim/waves";
 // toast, tower panel (upgrade/sell/priority), game-over overlay.
 
 export interface Hud {
-  update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo, settings: HudSettings): void;
+  update(state: GameState, selection: string | null, selectedTowerId: number | null, selectedCoreIndex: number | null, coord: CoordHudInfo, settings: HudSettings): void;
 }
 
 export interface HudSettings {
@@ -26,6 +28,7 @@ export function createHud(handlers: {
   onUpgrade: () => void;
   onSell: () => void;
   onPriority: () => void;
+  onRepair: () => void;
   onBanner: () => void;
   onSpeed: () => void;
   onSettings: () => void;
@@ -43,7 +46,7 @@ export function createHud(handlers: {
         padding: 10px 16px; font-size: 14px; letter-spacing: 0.06em;
       }
       #hud .top { top: 0; text-shadow: 0 1px 3px #000a; }
-      #hud .bottom { bottom: 0; align-items: flex-end; }
+      #hud .bottom { bottom: 0; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
       #hud button {
         pointer-events: auto; font: inherit; color: #d7dce8;
         background: #141b31d9; border: 1px solid #3a4568; border-radius: 4px;
@@ -53,7 +56,13 @@ export function createHud(handlers: {
       #hud button.sel { border-color: #35e0e8; color: #35e0e8; }
       #hud button.start { border-color: #7dff8a88; }
       #hud button:disabled { opacity: 0.4; cursor: default; }
-      #hud .build { display: flex; gap: 8px; }
+      #hud .build { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+      #hud .buildbtn {
+        min-width: 86px; padding: 6px 8px 8px; display: flex;
+        flex-direction: column; align-items: center; gap: 3px;
+      }
+      #hud .buildbtn canvas { width: 64px; height: 42px; display: block; }
+      #hud .buildbtn span { font-size: 10px; line-height: 1.15; white-space: nowrap; }
       #hud .toast {
         position: absolute; top: 18%; left: 0; right: 0; text-align: center;
         font-size: 17px; letter-spacing: 0.14em; color: #ffd9a0;
@@ -99,7 +108,7 @@ export function createHud(handlers: {
       #hud.coord .bar, #hud.coord .alert, #hud.coord .panel { display: none !important; }
       #hud.coord .coordbar { display: flex; }
       #hud.coord .coorddiv { display: block; }
-      #hud .tag { position: absolute; left: 12px; bottom: 54px; font-size: 11px; opacity: 0.6; }
+      #hud .tag { position: absolute; left: 12px; bottom: 92px; font-size: 11px; opacity: 0.6; }
       /* the arcade playfield mark (§12 vibe): the game name lives on screen */
       #hud .tag b { color: #35e0e8; font-weight: normal; letter-spacing: 0.14em; }
       #hud .panel {
@@ -129,6 +138,12 @@ export function createHud(handlers: {
         border-color: #4a5578; background: #101729cc; opacity: 0.82;
       }
       #hud input[type="range"] { width: 118px; accent-color: #35e0e8; }
+      @media (max-width: 980px) {
+        #hud button { padding: 7px 10px; }
+        #hud .buildbtn { min-width: 72px; padding: 5px 6px 7px; }
+        #hud .buildbtn canvas { width: 52px; height: 34px; }
+        #hud .buildbtn span { font-size: 9px; }
+      }
     </style>
     <div class="bar top">
       <span data-el="cash"></span>
@@ -154,6 +169,7 @@ export function createHud(handlers: {
       <div data-el="ptitle" style="letter-spacing:0.1em"></div>
       <div class="stats" data-el="pstats"></div>
       <button data-el="pupgrade"></button>
+      <button data-el="prepair"></button>
       <button data-el="psell"></button>
       <button data-el="ppriority"></button>
     </div>
@@ -188,7 +204,7 @@ export function createHud(handlers: {
       <small data-el="victoryscore"></small>
       <small>FREEPLAY UNLOCKED</small>
     </div>
-    <div class="tag"><b>EXODEF COMMAND</b> · 1/2/3 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
+    <div class="tag"><b>EXODEF COMMAND</b> · 1-6 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
   `;
 
   const el = (name: string) => hud.querySelector<HTMLElement>(`[data-el="${name}"]`)!;
@@ -216,17 +232,27 @@ export function createHud(handlers: {
 
   const buildBar = el("build");
   const buttons = new Map<string, HTMLButtonElement>();
+  const previews: TowerPickerPreview[] = [];
   for (const id of BUILDABLE) {
     const def = TOWER_DEFS[id];
     const btn = document.createElement("button");
-    btn.textContent = `[${def.hotkey}] ${def.name} $${def.cost}`;
+    btn.className = "buildbtn";
+    const preview = createTowerPickerPreview(id);
+    previews.push(preview);
+    const label = document.createElement("span");
+    label.textContent = `[${def.hotkey}] ${def.name} $${def.cost}`;
+    btn.append(preview.element, label);
+    btn.addEventListener("mouseenter", () => preview.setHover(true));
+    btn.addEventListener("mouseleave", () => preview.setHover(false));
     press(btn, () => handlers.onSelect(id));
     buildBar.appendChild(btn);
     buttons.set(id, btn);
   }
+  animateTowerPickerPreviews(previews);
   const startBtn = el("start") as HTMLButtonElement;
   press(startBtn, () => handlers.onStart());
   press(el("pupgrade"), () => handlers.onUpgrade());
+  press(el("prepair"), () => handlers.onRepair());
   press(el("psell"), () => handlers.onSell());
   press(el("ppriority"), () => handlers.onPriority());
   press(el("alertbtn"), () => handlers.onBanner());
@@ -240,7 +266,7 @@ export function createHud(handlers: {
   volumeInput.addEventListener("input", () => handlers.onVolume(Number(volumeInput.value) / 100));
 
   return {
-    update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo, settings: HudSettings): void {
+    update(state: GameState, selection: string | null, selectedTowerId: number | null, selectedCoreIndex: number | null, coord: CoordHudInfo, settings: HudSettings): void {
       hud.classList.toggle("coord", coord.active);
       const speedBtn = el("speed") as HTMLButtonElement;
       speedBtn.classList.toggle("sel", settings.simSpeed > 1);
@@ -272,6 +298,7 @@ export function createHud(handlers: {
         btn.classList.toggle("sel", selection === id);
         setDisabled(btn, state.cash < TOWER_DEFS[id].cost && selection !== id);
       }
+      for (const preview of previews) preview.setSelected(selection === preview.defId);
       setDisplay(startBtn, state.phase === "build" ? "" : "none");
       const nextMissiles = waveDef(state.round + 1)?.missiles;
       const startLabel = state.round >= WAVE_GOAL ? `▶ FREEPLAY ROUND ${state.round + 1}` : `▶ START ROUND ${state.round + 1}`;
@@ -290,7 +317,8 @@ export function createHud(handlers: {
 
       // tower panel
       const tower = selectedTowerId !== null ? towerById(state, selectedTowerId) : undefined;
-      setDisplay(el("panel"), tower ? "flex" : "none");
+      const core = selectedCoreIndex !== null ? state.cores[selectedCoreIndex] : undefined;
+      setDisplay(el("panel"), tower || core ? "flex" : "none");
       if (tower) {
         const def = TOWER_DEFS[tower.defId];
         const ammo = tower.battery && volleyOn ? ` · AMMO ${tower.battery.ammo}` : "";
@@ -298,13 +326,34 @@ export function createHud(handlers: {
         el("pstats").innerHTML = formatTowerStats(tower.defId, tower.tier);
         const upBtn = el("pupgrade") as HTMLButtonElement;
         const cost = upgradeCost(tower);
+        setDisplay(upBtn, "");
         setText(upBtn, cost === null ? "MAX TIER" : `UPGRADE $${cost}`);
         setDisabled(upBtn, cost === null || state.cash < cost);
+        setDisplay(el("prepair"), "none");
         setDisplay(el("psell"), tower.noSell ? "none" : "");
         setText(el("psell"), `SELL +$${sellRefund(tower)}`);
         // batteries never auto-target (§6.5) — hide the priority cycler
         setDisplay(el("ppriority"), tower.defId === "battery" ? "none" : "");
         setText(el("ppriority"), `TARGET: ${tower.priority.toUpperCase()}`);
+      } else if (core) {
+        const status =
+          core.hp >= CORE_HP ? "STABLE" :
+          core.hp > 0 ? "DAMAGED" :
+          "OFFLINE";
+        setText(el("ptitle"), `CORE ${core.index + 1}`);
+        el("pstats").innerHTML = `<b>STATUS</b> ${status}<br><b>HP</b> ${core.hp}/${CORE_HP}`;
+        setDisplay(el("pupgrade"), "none");
+        setDisplay(el("psell"), "none");
+        setDisplay(el("ppriority"), "none");
+        const repair = el("prepair") as HTMLButtonElement;
+        setDisplay(repair, "");
+        setText(repair, core.hp === 1 ? `REPAIR $${ECONOMY.coreRepairCost}` : "REPAIR UNAVAILABLE");
+        setDisabled(repair, core.hp !== 1 || state.cash < ECONOMY.coreRepairCost);
+      } else {
+        setDisplay(el("pupgrade"), "");
+        setDisplay(el("prepair"), "none");
+        setDisplay(el("psell"), "");
+        setDisplay(el("ppriority"), "");
       }
 
       if (state.phase === "gameover") {
@@ -343,6 +392,21 @@ function tierSummary(tier: TowerTier, defId: string, prev?: TowerTier): string {
     parts.push(delta("BLAST", tier.interceptor.blastRadius, prev?.interceptor?.blastRadius));
     parts.push(delta("AMMO", tier.interceptor.ammoPerVolley, prev?.interceptor?.ammoPerVolley));
     if (defId === "battery" || tier.interceptor.silos > 1) parts.push(delta("SILOS", tier.interceptor.silos, prev?.interceptor?.silos));
+  } else if (tier.repulsor) {
+    parts.push(delta("COOLDOWN", tier.repulsor.cooldown, prev?.repulsor?.cooldown));
+    parts.push(delta("DUR", tier.repulsor.duration, prev?.repulsor?.duration));
+    parts.push(delta("LIFT", tier.repulsor.liftSpeed, prev?.repulsor?.liftSpeed));
+    parts.push(delta("ALT", tier.maxAltitude, prev?.maxAltitude));
+  } else if (tier.guided) {
+    parts.push(delta("DMG", tier.guided.damage, prev?.guided?.damage));
+    parts.push(delta("RATE", Number((1 / tier.guided.period).toFixed(1)), prev?.guided && Number((1 / prev.guided.period).toFixed(1))));
+    parts.push(delta("SPD", tier.guided.speed, prev?.guided?.speed));
+    parts.push(delta("ALT", tier.maxAltitude, prev?.maxAltitude));
+  } else if (tier.drone) {
+    parts.push(delta("DRONES", tier.drone.count, prev?.drone?.count));
+    parts.push(delta("DPS", Number(((tier.drone.damage / tier.drone.period) * tier.drone.count).toFixed(1)), prev?.drone && Number(((prev.drone.damage / prev.drone.period) * prev.drone.count).toFixed(1))));
+    parts.push(delta("SPD", tier.drone.speed, prev?.drone?.speed));
+    parts.push(delta("RNG", tier.rangeRadius, prev?.rangeRadius));
   }
   return parts.join(" · ");
 }
@@ -352,4 +416,86 @@ function delta(label: string, value: number, prev?: number): string {
   const change = Number((value - prev).toFixed(1));
   const signed = change > 0 ? `+${change}` : String(change);
   return `${label} ${value} (${signed})`;
+}
+
+interface TowerPickerPreview {
+  defId: string;
+  element: HTMLCanvasElement;
+  setHover(value: boolean): void;
+  setSelected(value: boolean): void;
+  tick(dt: number): void;
+}
+
+function createTowerPickerPreview(defId: string): TowerPickerPreview {
+  const canvas = document.createElement("canvas");
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  const width = 64;
+  const height = 42;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(width, height, false);
+  renderer.setClearColor(0x000000, 0);
+
+  const scene = new THREE.Scene();
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const light = new THREE.DirectionalLight(0xffffff, 2.0);
+  light.position.set(8, 14, 10);
+  scene.add(light);
+
+  const model = makeTowerModel(defId);
+  const box = new THREE.Box3().setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  model.position.sub(center);
+  const scale = 12 / Math.max(size.x, size.y, size.z, 1);
+  model.scale.setScalar(scale);
+  model.rotation.y = -0.65;
+  scene.add(model);
+
+  const camera = new THREE.PerspectiveCamera(32, width / height, 0.1, 100);
+  camera.position.set(12, 9, 18);
+  camera.lookAt(0, 0, 0);
+
+  let hover = false;
+  let selected = false;
+  let dirty = true;
+  const render = () => {
+    renderer.render(scene, camera);
+    dirty = false;
+  };
+
+  return {
+    defId,
+    element: canvas,
+    setHover(value: boolean): void {
+      if (hover !== value) {
+        hover = value;
+        dirty = true;
+      }
+    },
+    setSelected(value: boolean): void {
+      if (selected !== value) {
+        selected = value;
+        dirty = true;
+      }
+    },
+    tick(dt: number): void {
+      if (hover || selected) {
+        model.rotation.y += dt * 1.9;
+        render();
+      } else if (dirty) {
+        render();
+      }
+    },
+  };
+}
+
+function animateTowerPickerPreviews(previews: TowerPickerPreview[]): void {
+  let last = performance.now();
+  const frame = (now: number) => {
+    requestAnimationFrame(frame);
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    for (const preview of previews) preview.tick(dt);
+  };
+  requestAnimationFrame(frame);
 }

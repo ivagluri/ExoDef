@@ -1,4 +1,4 @@
-import { ECONOMY } from "../balance";
+import { CORE_HP, ECONOMY } from "../balance";
 import { TOWER_DEFS } from "../content/towers";
 import { toast, type GameState, type Priority, type Tower } from "./state";
 
@@ -57,4 +57,25 @@ export function cyclePriority(state: GameState, id: number): void {
   const tower = towerById(state, id);
   if (!tower) return;
   tower.priority = PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(tower.priority) + 1) % PRIORITY_ORDER.length];
+}
+
+export function repairCore(state: GameState, index: number): void {
+  if (state.phase === "gameover") return;
+  const core = state.cores[index];
+  if (!core || core.hp <= 0) {
+    toast(state, "CORE OFFLINE — REBUILD ONLY");
+    return;
+  }
+  if (core.hp >= CORE_HP) {
+    toast(state, "CORE ALREADY STABLE");
+    return;
+  }
+  if (state.cash < ECONOMY.coreRepairCost) {
+    toast(state, "NOT ENOUGH CASH");
+    return;
+  }
+  state.cash -= ECONOMY.coreRepairCost;
+  core.hp = CORE_HP;
+  state.coresDirty = true;
+  toast(state, `CORE ${index + 1} REPAIRED -$${ECONOMY.coreRepairCost}`);
 }

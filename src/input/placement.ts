@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { CORE_POSITIONS, PLACEMENT } from "../balance";
+import { CORE_POSITIONS, CORE_RADIUS, PLACEMENT } from "../balance";
 import { TOWER_DEFS } from "../content/towers";
 import { makeGhost, makeRangeDome } from "../render/models";
 import { toast, type GameState, type Tower } from "../sim/state";
@@ -11,6 +11,7 @@ import { toast, type GameState, type Tower } from "../sim/state";
 export class PlacementInput {
   selection: string | null = null;
   selectedTowerId: number | null = null;
+  selectedCoreIndex: number | null = null;
   /** false while the coordinate view owns clicks (aiming, not placing) */
   enabled = true;
   private ghost: { object: THREE.Group; setValid: (v: boolean) => void } | null = null;
@@ -36,6 +37,7 @@ export class PlacementInput {
       if (ev.code === "Escape") {
         this.select(null);
         this.selectedTowerId = null;
+        this.selectedCoreIndex = null;
       }
       for (const def of Object.values(TOWER_DEFS)) {
         if (ev.key === def.hotkey) this.select(this.selection === def.id ? null : def.id);
@@ -46,6 +48,10 @@ export class PlacementInput {
   select(defId: string | null): void {
     if (defId && !TOWER_DEFS[defId]) return;
     this.selection = defId;
+    if (defId) {
+      this.selectedTowerId = null;
+      this.selectedCoreIndex = null;
+    }
     this.clearGhost();
     if (defId) {
       this.ghost = makeGhost(defId);
@@ -134,16 +140,27 @@ export class PlacementInput {
         tower.battery = { ammo, reloadLeft: 0, inFlight: 0 };
       }
       this.state.towers.push(tower);
+      this.selectedTowerId = tower.id;
+      this.selectedCoreIndex = null;
       return;
     }
 
-    // no build selection: click near a tower opens its panel, empty ground closes it
+    // no build selection: click near a tower/core opens its panel, empty ground closes it
     for (const tower of this.state.towers) {
       if (tower.alive && Math.hypot(this.groundPoint.x - tower.pos.x, this.groundPoint.z - tower.pos.z) < 8) {
         this.selectedTowerId = tower.id;
+        this.selectedCoreIndex = null;
+        return;
+      }
+    }
+    for (const core of this.state.cores) {
+      if (core.hp > 0 && Math.hypot(this.groundPoint.x - core.pos.x, this.groundPoint.z - core.pos.z) < CORE_RADIUS + 7) {
+        this.selectedCoreIndex = core.index;
+        this.selectedTowerId = null;
         return;
       }
     }
     this.selectedTowerId = null;
+    this.selectedCoreIndex = null;
   }
 }

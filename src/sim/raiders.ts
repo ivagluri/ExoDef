@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { MOTHERSHIP } from "../balance";
+import { BANDS, MOTHERSHIP } from "../balance";
 import { BOMBER, DIVER, ENEMY_DEFS, UFO } from "../content/enemies";
 import { detonateAt, spawnGruntGroup } from "./enemies";
 import { pick, rand, randRange } from "./rng";
@@ -225,9 +225,18 @@ function updateMothership(state: GameState, enemy: Enemy, dt: number): void {
   }
 }
 
+function updateRepulse(enemy: Enemy, dt: number): boolean {
+  if (!enemy.repulse) return false;
+  enemy.pos.y = Math.min(BANDS.entryTop, enemy.pos.y + enemy.repulse.liftSpeed * dt);
+  enemy.repulse.ttl -= dt;
+  if (enemy.repulse.ttl <= 0) enemy.repulse = undefined;
+  return true;
+}
+
 export function updateRaiders(state: GameState, dt: number): void {
   for (const enemy of state.enemies) {
     if (!enemy.alive || !enemy.ai) continue;
+    if (enemy.defId !== "mothership" && updateRepulse(enemy, dt)) continue;
     if (enemy.defId === "bomber") updateBomber(state, enemy, dt);
     else if (enemy.defId === "diver") updateDiver(state, enemy, dt);
     else if (enemy.defId === "ufo") updateUfo(enemy, dt);

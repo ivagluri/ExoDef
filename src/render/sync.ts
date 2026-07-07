@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { BlastKind, GameState } from "../sim/state";
-import { makeBlastModel, makeBombModel, makeEnemyModel, makeInterceptorModel, makeShellModel, makeTowerModel, makeWarheadModel, MODEL_COLORS, type BlastVisual } from "./models";
+import { makeAAMissileModel, makeBlastModel, makeBombModel, makeDroneModel, makeEnemyModel, makeInterceptorModel, makeShellModel, makeTowerModel, makeWarheadModel, MODEL_COLORS, type BlastVisual } from "./models";
 
 // Reconciles sim entity arrays with Three.js objects each frame (§13).
 // The sim owns truth; this module only mirrors it.
@@ -19,6 +19,8 @@ export class RenderSync {
   private towerObjs = new Map<number, THREE.Object3D>();
   private enemyObjs = new Map<number, THREE.Object3D>();
   private shellObjs = new Map<number, THREE.Object3D>();
+  private aaMissileObjs = new Map<number, THREE.Object3D>();
+  private droneObjs = new Map<number, THREE.Object3D>();
   private bombObjs = new Map<number, THREE.Object3D>();
   private warheadObjs = new Map<number, THREE.Object3D>();
   private interceptorObjs = new Map<number, THREE.Object3D>();
@@ -30,6 +32,16 @@ export class RenderSync {
     color: MODEL_COLORS.tracer,
     transparent: true,
     opacity: 0.9,
+  });
+  private repulsorMat = new THREE.LineBasicMaterial({
+    color: MODEL_COLORS.repulsorBeam,
+    transparent: true,
+    opacity: 0.92,
+  });
+  private droneMat = new THREE.LineBasicMaterial({
+    color: MODEL_COLORS.droneBeam,
+    transparent: true,
+    opacity: 0.78,
   });
   private warheadTrailMat = new THREE.MeshBasicMaterial({
     color: MODEL_COLORS.warheadTrail,
@@ -86,6 +98,26 @@ export class RenderSync {
       (s) => s.id,
       () => makeShellModel(),
       (s, obj) => obj.position.copy(s.pos),
+    );
+    this.reconcile(
+      this.aaMissileObjs,
+      state.aaMissiles.filter((m) => m.alive),
+      (m) => m.id,
+      () => makeAAMissileModel(),
+      (m, obj) => {
+        obj.position.copy(m.pos);
+        obj.rotation.y += 0.08;
+      },
+    );
+    this.reconcile(
+      this.droneObjs,
+      state.drones.filter((d) => d.alive),
+      (d) => d.id,
+      () => makeDroneModel(),
+      (d, obj) => {
+        obj.position.copy(d.pos);
+        obj.rotation.y += 0.12;
+      },
     );
     this.reconcile(
       this.bombObjs,
@@ -266,7 +298,11 @@ export class RenderSync {
     for (const tracer of state.effects.tracers) {
       if (!this.tracerObjs.has(tracer)) {
         const geo = new THREE.BufferGeometry().setFromPoints([tracer.from, tracer.to]);
-        const line = new THREE.Line(geo, this.tracerMat);
+        const mat =
+          tracer.kind === "repulsor" ? this.repulsorMat :
+          tracer.kind === "drone" ? this.droneMat :
+          this.tracerMat;
+        const line = new THREE.Line(geo, mat);
         this.tracerObjs.set(tracer, line);
         this.scene.add(line);
       }

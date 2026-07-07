@@ -95,17 +95,20 @@ Band edges **[tunable]**.
 
 ## 4. Towers
 
-All towers are **data-driven** — adding a tower is adding a data entry + a model, no new systems. v1 ships three; beam and radar are the first expansions (§14).
+All towers are **data-driven** — adding a tower is adding a data entry + a model, no new systems. The current playable roster is six towers: the original gun/flak/battery set plus Phase 6 repulsor, AA missile, and drone additions.
 
 Towers occupy a circular footprint (radius 6 u), placed freely on open ground (§ placement rules in 11.2). Every tower has **1 HP** — any bomb/warhead/landing that touches it destroys it; rebuild costs full price. Range is a **sphere** (dome above ground) centered on the tower.
 
-### v1 roster
+### Current roster
 
 | Tower | Cost | Range radius | Altitude reach | Damage | Notes |
 |---|---|---|---|---|---|
 | **Gun turret** | $150 | 80 | ≤90 (near formation band) | 2 dmg × 4/s = 8 DPS, single target | Long reach, weak hits — chip coverage. *(Rebalanced after 2026-07-07 playtest: original short-range version left minutes of dead time before contact.)* |
 | **Flak cannon** | $300 | 60 | MID (≤80) | 15 dmg burst / 1.5s, 8 u AoE radius | The kill power vs. grouped grunts — shorter reach than gun, way harder hits |
 | **Missile battery** | $500 (first free, pre-placed at center, unsellable) | interception only | any (via missile view) | blast kills warheads | See §6. Does NOT auto-fire at invaders |
+| **Repulsor Beam** | $250 | 76 | ≤120 | control debuff | Applies a temporary upward-retreat debuff to normal invaders, then retargets after cooldown. No warhead/boss effect. |
+| **AA Missile** | $450 | near-global | ENTRY/HIGH | slow guided anti-invader missile | Automatic anti-invader only. Enemy warheads remain purely player-fought. |
+| **Drone Launcher** | $350 | broad | HIGH | persistent drone DPS | Maintains reusable drones; tier upgrades increase active drone cap. |
 
 ### Upgrade tiers (each tower: 2 upgrade tiers, applied per-tower)
 
@@ -114,6 +117,9 @@ Towers occupy a circular footprint (radius 6 u), placed freely on open ground (�
 | Gun | $120 → 16 DPS, range 90, reach ≤100 | $250 → 24 DPS, range 100, reach ≤110 |
 | Flak | $250 → burst / 1.1s, AoE 10 | $450 → 25 dmg, reach ≤95 (clips HIGH) |
 | Battery | $400 → reload 2s, blast r16, speed 80, ammo 8 | $700 → twin silo (2 interceptors in flight), blast r20, speed 100, ammo 10 |
+| Repulsor | $260 → shorter cooldown, longer/stronger lift | $520 → faster cooldown, longer/stronger lift, more reach |
+| AA Missile | $380 → faster/stronger guided missiles | $700 → faster fire, stronger missiles, higher speed |
+| Drone | $330 → 2 active drones | $620 → 3 active drones, stronger/faster coverage |
 
 Additional batteries: **$600** each **[tunable]**. All numbers **[tunable]**.
 
@@ -123,11 +129,11 @@ Targeting priority (per tower, cycle on click): First (lowest altitude) / Strong
 
 ```ts
 interface TowerDef {
-  id: string;                    // "gun", "flak", "battery", later "beam", "radar"
+  id: string;                    // "gun", "flak", "battery", "repulsor", "aaMissile", "drone"
   cost: number;
   footprintRadius: number;       // 6
   tiers: TowerTier[];            // index 0 = base
-  role: "direct" | "aoe" | "interceptor" | "support";
+  role: "direct" | "aoe" | "interceptor" | "support" | "control";
 }
 interface TowerTier {
   upgradeCost: number;           // 0 for base tier
@@ -137,6 +143,10 @@ interface TowerTier {
   burst?: { damage: number; period: number; aoeRadius: number }; // aoe
   interceptor?: { speed: number; reload: number; blastRadius: number;
                   ammoPerVolley: number; silos: number };        // battery
+  repulsor?: { cooldown: number; duration: number; liftSpeed: number };
+  guided?: { damage: number; period: number; speed: number };    // AA missile
+  drone?: { count: number; damage: number; period: number;
+            speed: number; attackRange: number };
 }
 ```
 
@@ -318,6 +328,7 @@ Warhead trajectories are deterministic arcs (precomputed control points, e.g. a 
 | Tower destroyed | Gone; rebuild at full price. No salvage from destruction (sell alive = 70% back) |
 | Core destroyed | Lasting scar: −$25/round income, closer to game over |
 | **Bonus core** | At waves 10/20/30/40/50: one destroyed core is rebuilt (if any) **[tunable]** — Missile Command's mercy rule; prevents death spirals across the 50-wave run |
+| **Paid core repair** | A surviving damaged core (1 HP) can be selected and repaired to full for $300 **[tunable]** at any time. Destroyed cores cannot be cash-repaired. |
 | All cores destroyed | Game over |
 
 ### Economy (starting numbers, all **[tunable]**)
@@ -326,10 +337,11 @@ Warhead trajectories are deterministic arcs (precomputed control points, e.g. a 
 |---|---|
 | Starting cash | $650 (+ free T1 battery pre-placed at center) |
 | Core income | $25 / core / round |
+| Damaged-core repair | $300 |
 | Grunt / Diver / Bomber / UFO | $8 / $15 / $25 / $150 |
 | Intercepted warhead | $30 |
 
-*(The early-start bonus was cut per 2026-07-07 playtest: unnecessary. Same playtest flagged the economy as **too generous overall** — tighten in the Phase 6 balance pass.)*
+*(The early-start bonus was cut per 2026-07-07 playtest: unnecessary. Same playtest flagged the economy as **too generous overall** — defer full tightening until the expanded tower roster settles.)*
 
 Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 core income) affords the second tower by round 2 and ~$1000 by round 5's first volley — enough for a battery T2 upgrade OR a saved cushion. Builder agents: keep this doc's table as the single source; put numbers in one `balance.ts`.
 
@@ -392,7 +404,7 @@ HP × `1.06^(wave−50)`, counts +10%/wave, volley every 2–3 waves, warhead ca
 | TAB | Toggle map ⇄ coordinate view (only while a volley is active) |
 | Q / E, or right-drag | Orbit map camera |
 | Scroll | Zoom step |
-| 1 / 2 / 3 | Select tower type for placement (gun / flak / battery) |
+| 1–6 | Select tower type for placement (gun / flak / battery / repulsor / AA missile / drone) |
 | ESC | Cancel placement / close panel |
 | ENTER | Start next round |
 | X (or HUD button) | Toggle 3× fast-forward **[tunable]** (2026-07-07 playtest QoL; auto-resets to 1× when a volley launches — the siren moment is never fast-forwarded) |
@@ -413,18 +425,19 @@ Gamepad: out of scope v1 (backlog §14).
 │                                                      │
 │              ⚠ MISSILE LAUNCH — 3 INBOUND ⚠          │ ← alert banner
 │                    [TAB] to intercept                │    (only during volley)
-│ ┌────┐┌────┐┌────┐                                   │
-│ │▲gun││✱flk││◈bty│   ▶ START ROUND 12  ⚠ MISSILES    │ ← build bar + round
-│ │$150││$300││$600│      ▦ radar (§11.4)              │    preview w/ warning
-│ └────┘└────┘└────┘                                   │
+│ ┌────┐┌────┐┌────┐┌────┐┌────┐┌────┐                │
+│ │▲gun││✱flk││◈bty││⇑rep││⌁mis││◇drn│ ▶ START ROUND 12│ ← build bar + round
+│ │$150││$300││$600││$250││$450││$350│  ⚠ MISSILES     │    preview w/ warning
+│ └────┘└────┘└────┘└────┘└────┘└────┘                │
 └──────────────────────────────────────────────────────┘
 ```
 
 ### 11.2 Build & upgrade flow
 
-- Click build-bar tower (or 1/2/3) → ghost follows cursor with **range dome** (translucent sphere cap showing radius + altitude ceiling). Green = valid, red = invalid. Click to place, ESC cancels.
+- Click build-bar tower (or 1–6) → ghost follows cursor with **range dome** (translucent sphere cap showing radius + altitude ceiling). Green = valid, red = invalid. Click to place, ESC cancels.
 - Placement invalid: overlapping core, tower, or map edge. Everything else is open ground (free placement — layout is the strategy).
 - Click a placed tower → panel: tier, upgrade button + cost, sell (70%), targeting priority cycle.
+- Click a surviving core → panel: status/HP and repair button. Repair costs $300 and only works on damaged cores (1 HP), not destroyed cores.
 
 ### 11.3 Coordinate-view HUD
 
@@ -493,10 +506,11 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 
 ## 14. v1 scope cut-line & expansion backlog
 
-**v1 (first playable) includes:** the one map, 3 towers with tiers, 4 enemies, missile volleys with plotted side+top click interception, dual-view interception, waves 1–15 authored + formula to 50 + freeplay, full damage/economy model, Spectre art pass, audio cues, local high score.
+**Current playable includes:** the one map, 6 towers with tiers, 4 enemies plus mothership, missile volleys with plotted side+top click interception, dual-view interception, waves 1–15 authored + formula to 50 + freeplay, full damage/economy model, Spectre art pass, audio cues, local high score, and paid damaged-core repair.
 
 **Backlog (explicitly NOT v1):**
-- Beam tower (high-alt sniper, the UFO answer) & Radar tower (+range aura, +grace seconds, volley detail preview) — first additions, schemas already support them
+- Radar tower is not active scope; the persistent HUD radar already solves the v1 readability problem. Any future radar tower would need a distinct support role.
+- High-alt sniper tower remains a possible future concept, but "Beam" now means the Repulsor Beam control tower.
 - More enemies: shielded tank, splitter (mothership/boss stages were promoted into core v1 — see §5/§9)
 - MIRV warheads (split at MID — interception triage drama)
 - **Converging volleys — multiple headings in one volley** (2026-07-07, user): warheads closing on the cores from several compass directions simultaneously. Today every volley already comes from a random direction, but all warheads *within* a volley share it — the coordinate view's whole frame (§7.1) and the top view's approach-side overage assume one heading. Multi-heading needs a view rethink: per-heading sub-volleys the player cycles between, or a symmetric top view with a rotating frame. Good candidate for a late-game/freeplay escalation once the basic plotting loop is proven.
@@ -505,15 +519,15 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 - **Bypass lives / platform integrity** (2026-07-07, user): now that the battlefield is an orbital defence platform, a later design pass could replace "all cores destroyed = death" with a Bloons-TD-style lives pool where only a certain number of enemies can bypass before it's over. Changes the loss condition (§3/§8); not part of v1.
 - ~~Branding to match the reframe~~ **DONE 2026-07-07**: retitled **EXODEF** (user's pick, distilled from "Exosphere Defence"); the playfield carries an **EXODEF COMMAND** mark vector-arcade style (HUD tag, bottom-left). Core/platform language is now the standard fiction.
 
-**Weapon ideas from the 2026-07-07 playtest (backlog; curate 2–3 winners after Phase 4 ships — notes preserved verbatim):**
+**Weapon ideas from the 2026-07-07 playtest (backlog; promoted ideas marked):**
 - **Frag bomb** — (no further notes yet)
-- **Unlimited-range missile tower** — slow but one-shots a basic enemy. (Context note: "machine guns can't reach spawn heights, missile can but very slow.")
+- ~~**Unlimited-range missile tower**~~ — **PROMOTED 2026-07-07 as AA Missile tower.** Slow guided anti-invader shots; never targets warheads.
 - **"Napalm clouder"** — leaves a chip-damage field, not across full x/y but a set volume that increases with upgrade (but never full x/y).
 - **Orbital mine launcher** — launches magnetic mine, exact mechanics tbd.
-- **Repulsor beam** — makes an enemy retreat for a set amount of time.
+- ~~**Repulsor beam**~~ — **PROMOTED 2026-07-07 as Repulsor Beam tower.** Applies upward-retreat debuffs on a cooldown.
 - **Aerial hack array** — "converts" enemy to become kamikaze unit that attacks other invaders; closest unit for simplicity, or self-destruct if alone; damage scaling tbd.
 - **Blockade launcher** — purely defensive unit, slowly builds and launches physical barriers, not very high up but can soak 2–3 basic enemy impacts. Might be tricky to balance.
-- **Drone launcher** — drones can reach anywhere but less damage than basic gun; can swarm, and concentrated on one unit can equal or surpass the basic gun (max ~2×, needs balancing). Unsure if destroyed by enemy or limited life (lives X shots) — not the final design decision.
+- ~~**Drone launcher**~~ — **PROMOTED 2026-07-07 as Drone Launcher tower.** Persistent reusable drones with tiered active-drone caps.
 - **Nuke** — not automatic; can wipe all but bosses, but wipes player towers as well, except the missile battery.
 
 ---
@@ -523,7 +537,7 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 1. ~~**Default fire scheme:** A (plotted shot) vs B (plot + commit).~~ **Answered 2026-07-07:** plotted side+top click stays; plot+commit/SPACE was too slow for live gameplay and has been removed.
 2. **Volley density & pace:** warhead count curve, 30s flight time, 8s grace — tune until volleys are tense but plottable.
 3. ~~**The peek problem:** is TAB-peeking at the map mid-volley enough, or does the coordinate view need the thin map-status strip upgraded to a mini radar?~~ **Answered 2026-07-07:** yes — and further: the radar is a persistent overlay in *both* views (§11.4), because altitude is hard to read at the fixed pitch at all times, not just during volleys.
-4. **Difficulty numbers:** everything marked [tunable], especially economy pacing around wave 5 (first volley must be survivable with the free battery alone). 2026-07-07 playtest inputs for the Phase 6 pass: economy too generous overall; stronger-enemy volume too low as stages progress (big grunt swarms stay too easy — composition vs. strength vs. economy lever undecided).
+4. **Difficulty numbers:** everything marked [tunable], especially economy pacing around wave 5 (first volley must be survivable with the free battery alone). 2026-07-07 playtest inputs remain: economy too generous overall; stronger-enemy volume too low as stages progress. Full balance is deferred until the expanded tower roster stabilizes.
 5. **Shared-axis clicks:** does "last click wins u" ever feel like fighting the controls? If so, consider per-view u memory.
 6. **Camera orbit:** does anyone actually rotate? If not, that's fine (it's a toy) — but check it never *hurts* readability.
-7. **Battery upgrade direction** (2026-07-07): bigger blast radius (current tiers, the Missile Command "spread" feel) vs. a fan-shot (one launch → 2–3 interceptors around the plotted point)? User undecided — playtest the current tiers first, revisit after real volleys.
+7. **Battery upgrade direction** (2026-07-07): bigger blast radius (current tiers, the Missile Command "spread" feel) vs. fan-shot/persistent blast/cluster-warhead ideas. User undecided — defer until the expanded roster has been playtested.

@@ -22,6 +22,7 @@ export function spawnGruntGroup(state: GameState, count: number, hpScale = 1, sp
     heading: rand() * Math.PI * 2,
     wanderSeed: rand() * Math.PI * 2,
     speedScale,
+    repulse: undefined,
     members: [],
   };
   for (let i = 0; i < count; i++) {
@@ -103,10 +104,18 @@ export function updateGroups(state: GameState, dt: number): void {
     group.anchorX += Math.cos(group.heading) * GRUNT.driftSpeed * dt;
     group.anchorZ += Math.sin(group.heading) * GRUNT.driftSpeed * dt;
 
-    // descent: fast entry dive, then a slow sink whose rate swells and eases
-    if (group.y > GRUNT.formationTop) {
-      group.y = Math.max(GRUNT.formationTop, group.y - GRUNT.entryDiveSpeed * group.speedScale * dt);
+    // Repulsor debuff: lift the formation briefly, then let normal descent resume.
+    if (group.repulse && group.repulse.ttl > 0) {
+      group.y = Math.min(GRUNT.formationTop, group.y + group.repulse.liftSpeed * dt);
+      group.repulse.ttl -= dt;
     } else {
+      group.repulse = undefined;
+    }
+
+    // descent: fast entry dive, then a slow sink whose rate swells and eases
+    if (!group.repulse && group.y > GRUNT.formationTop) {
+      group.y = Math.max(GRUNT.formationTop, group.y - GRUNT.entryDiveSpeed * group.speedScale * dt);
+    } else if (!group.repulse) {
       const swell = 1 + GRUNT.sinkSwell * Math.sin(t * 0.4 + group.wanderSeed * 2);
       group.y -= GRUNT.sinkSpeed * group.speedScale * swell * dt;
     }

@@ -8,6 +8,12 @@ export const MODEL_COLORS = {
   gun: 0xf7d23e,
   flak: 0xf78c3e,
   battery: 0x35e0e8,
+  repulsor: 0x8fd8ff,
+  repulsorCore: 0xfff6c0,
+  aaMissile: 0xff5a5a,
+  aaMissileFin: 0xffd9a0,
+  drone: 0x7dff8a,
+  droneCore: 0x35e0e8,
   batteryDormant: 0x1a4a54, // status light before the first siren (§3)
   grunt: 0xe040c8,
   bomber: 0x54e05a,
@@ -21,6 +27,8 @@ export const MODEL_COLORS = {
   bombCore: 0x3a2430,
   shell: 0xffd9a0,
   tracer: 0xfff6c0,
+  repulsorBeam: 0x8fd8ff,
+  droneBeam: 0x7dff8a,
   blast: 0xe8fdff,
   flakBlast: 0xffd9a0,
   impactBlast: 0xff6a2a,
@@ -69,6 +77,37 @@ export function makeTowerModel(defId: string): THREE.Group {
     light.position.set(0, 3.4, 4.2);
     group.add(slab, siloA, siloB, light);
     group.userData.lightMat = lightMat;
+  } else if (defId === "repulsor") {
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.8, 3, 8), lambert(MODEL_COLORS.repulsor));
+    base.position.y = 1.5;
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.2, 8, 7), lambert(MODEL_COLORS.repulsor));
+    mast.position.y = 6;
+    const dish = new THREE.Mesh(new THREE.ConeGeometry(3.2, 5.2, 8), lambert(MODEL_COLORS.repulsorCore));
+    dish.position.y = 11;
+    dish.rotation.x = Math.PI;
+    group.add(base, mast, dish);
+  } else if (defId === "aaMissile") {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(7.5, 2.8, 7.5), lambert(MODEL_COLORS.aaMissileFin));
+    base.position.y = 1.4;
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.2, 9), lambert(MODEL_COLORS.aaMissileFin));
+    rail.position.set(0, 4.2, 0);
+    rail.rotation.x = -0.35;
+    const rocket = new THREE.Mesh(new THREE.ConeGeometry(1.6, 7, 7), lambert(MODEL_COLORS.aaMissile));
+    rocket.position.set(0, 6.3, -1.2);
+    rocket.rotation.x = -Math.PI / 2 - 0.35;
+    group.add(base, rail, rocket);
+  } else if (defId === "drone") {
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 5, 2.2, 8), lambert(MODEL_COLORS.droneCore));
+    pad.position.y = 1.1;
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.1, 5, 7), lambert(MODEL_COLORS.droneCore));
+    mast.position.y = 4.4;
+    const hub = new THREE.Mesh(new THREE.OctahedronGeometry(2.2), lambert(MODEL_COLORS.drone));
+    hub.position.y = 8;
+    const armA = new THREE.Mesh(new THREE.BoxGeometry(8, 0.9, 0.9), lambert(MODEL_COLORS.drone));
+    armA.position.y = 8;
+    const armB = armA.clone();
+    armB.rotation.y = Math.PI / 2;
+    group.add(pad, mast, hub, armA, armB);
   } else {
     // fallback: unmistakable placeholder
     const box = new THREE.Mesh(new THREE.BoxGeometry(6, 8, 6), lambert(0xff00ff));
@@ -139,6 +178,26 @@ export function makeBombModel(): THREE.Object3D {
 
 export function makeShellModel(): THREE.Mesh {
   return new THREE.Mesh(new THREE.SphereGeometry(1, 6, 5), lambert(MODEL_COLORS.shell));
+}
+
+export function makeAAMissileModel(): THREE.Object3D {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.ConeGeometry(1.15, 5.2, 7), lambert(MODEL_COLORS.aaMissile));
+  body.rotation.x = Math.PI / 2;
+  const fin = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.45, 1.2), lambert(MODEL_COLORS.aaMissileFin));
+  fin.position.z = -1.8;
+  group.add(body, fin);
+  return group;
+}
+
+export function makeDroneModel(): THREE.Object3D {
+  const group = new THREE.Group();
+  const core = new THREE.Mesh(new THREE.OctahedronGeometry(1.35), lambert(MODEL_COLORS.drone));
+  const armA = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.42, 0.42), lambert(MODEL_COLORS.droneCore));
+  const armB = armA.clone();
+  armB.rotation.y = Math.PI / 2;
+  group.add(core, armA, armB);
+  return group;
 }
 
 export function makeWarheadModel(): THREE.Mesh {

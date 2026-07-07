@@ -52,6 +52,7 @@ export const ECONOMY = {
   startingCash: 650,
   coreIncome: 25, // per surviving core per round
   sellRefund: 0.7,
+  coreRepairCost: 300,
 } as const;
 
 // GAME-DESIGN.md §3 — score

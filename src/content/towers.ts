@@ -11,6 +11,12 @@ export interface TowerTier {
   burst?: { damage: number; period: number; aoeRadius: number; shellSpeed: number };
   /** batteries: player-plotted interception only, never auto-fire (§6.5) */
   interceptor?: { speed: number; reload: number; blastRadius: number; ammoPerVolley: number; silos: number };
+  /** repulsor: applies an upward-retreat debuff, then retargets after cooldown */
+  repulsor?: { cooldown: number; duration: number; liftSpeed: number };
+  /** automatic guided missile vs airborne invaders only, never warheads */
+  guided?: { damage: number; period: number; speed: number };
+  /** persistent reusable drones maintained by the tower */
+  drone?: { count: number; damage: number; period: number; speed: number; attackRange: number };
 }
 
 export interface TowerDef {
@@ -18,7 +24,7 @@ export interface TowerDef {
   name: string;
   cost: number;
   hotkey: string;
-  role: "direct" | "aoe" | "interceptor" | "support";
+  role: "direct" | "aoe" | "interceptor" | "support" | "control";
   tiers: TowerTier[];
 }
 
@@ -65,8 +71,44 @@ export const TOWER_DEFS: Record<string, TowerDef> = {
       { upgradeCost: 700, rangeRadius: 0, maxAltitude: 0, interceptor: { speed: 100, reload: 2, blastRadius: 20, ammoPerVolley: 10, silos: 2 } },
     ],
   },
-  // "beam"/"radar" are backlog (§14)
+  repulsor: {
+    id: "repulsor",
+    name: "REPULSOR",
+    cost: 250,
+    hotkey: "4",
+    role: "control",
+    tiers: [
+      { upgradeCost: 0, rangeRadius: 76, maxAltitude: 120, repulsor: { cooldown: 5, duration: 2.4, liftSpeed: 18 } },
+      { upgradeCost: 260, rangeRadius: 86, maxAltitude: 130, repulsor: { cooldown: 3.8, duration: 3.0, liftSpeed: 22 } },
+      { upgradeCost: 520, rangeRadius: 96, maxAltitude: 145, repulsor: { cooldown: 2.8, duration: 3.6, liftSpeed: 26 } },
+    ],
+  },
+  aaMissile: {
+    id: "aaMissile",
+    name: "AA MISSILE",
+    cost: 450,
+    hotkey: "5",
+    role: "direct",
+    tiers: [
+      { upgradeCost: 0, rangeRadius: 190, maxAltitude: 160, guided: { damage: 80, period: 4.2, speed: 52 } },
+      { upgradeCost: 380, rangeRadius: 205, maxAltitude: 165, guided: { damage: 125, period: 3.5, speed: 68 } },
+      { upgradeCost: 700, rangeRadius: 220, maxAltitude: 170, guided: { damage: 180, period: 2.9, speed: 86 } },
+    ],
+  },
+  drone: {
+    id: "drone",
+    name: "DRONE",
+    cost: 350,
+    hotkey: "6",
+    role: "support",
+    tiers: [
+      { upgradeCost: 0, rangeRadius: 130, maxAltitude: 125, drone: { count: 1, damage: 4, period: 0.55, speed: 38, attackRange: 13 } },
+      { upgradeCost: 330, rangeRadius: 145, maxAltitude: 140, drone: { count: 2, damage: 4, period: 0.48, speed: 44, attackRange: 14 } },
+      { upgradeCost: 620, rangeRadius: 160, maxAltitude: 155, drone: { count: 3, damage: 5, period: 0.45, speed: 50, attackRange: 15 } },
+    ],
+  },
+  // "radar" is backlog; the persistent HUD radar covers the v1 readability need.
 };
 
 /** Towers available on the build bar this phase. */
-export const BUILDABLE = ["gun", "flak", "battery"] as const;
+export const BUILDABLE = ["gun", "flak", "battery", "repulsor", "aaMissile", "drone"] as const;

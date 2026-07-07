@@ -3,12 +3,77 @@
 // Run with:  npm run smoke
 // Extend this as phases add systems — it's the fast regression check for agents.
 import * as THREE from "three";
-import { upgradeCost, upgradeTower } from "../src/sim/actions";
+import { repairCore, upgradeCost, upgradeTower } from "../src/sim/actions";
 import { simTick, startRound } from "../src/sim/game";
 import { batteryTier, fireInterceptor, pickBattery, warheadPointAt } from "../src/sim/missiles";
 import { coresAlive, createGameState, type GameState, type Warhead } from "../src/sim/state";
+import { updateDrones, updateTowers } from "../src/sim/towers";
 import { WAVE_COUNT } from "../src/sim/waves";
 import { TOWER_DEFS } from "../src/content/towers";
+
+function assert(condition: boolean, message: string): void {
+  if (!condition) throw new Error(message);
+}
+
+function runPhase6Checks(): void {
+  const repair = createGameState();
+  repair.cash = 300;
+  repair.cores[0].hp = 1;
+  repairCore(repair, 0);
+  assert(repair.cores[0].hp === 2, "repair did not restore a damaged core");
+  assert(repair.cash === 0, "repair did not spend cash");
+  repair.cash = 1000;
+  repair.cores[0].hp = 0;
+  repairCore(repair, 0);
+  assert(repair.cores[0].hp === 0 && repair.cash === 1000, "destroyed core was cash-repaired");
+
+  const repulsor = createGameState();
+  repulsor.phase = "combat";
+  repulsor.towers.push({
+    id: repulsor.nextId++, defId: "repulsor", tier: 0,
+    pos: new THREE.Vector3(0, 0, 0),
+    cooldown: 0, priority: "first", alive: true,
+  });
+  repulsor.enemies.push({
+    id: repulsor.nextId++, defId: "bomber", hp: 60,
+    pos: new THREE.Vector3(12, 52, 0),
+    alive: true, groupId: null,
+    ai: { mode: "approach", timer: 0, vel: new THREE.Vector3(), target: new THREE.Vector3() },
+  });
+  updateTowers(repulsor, 1 / 60);
+  assert((repulsor.enemies[0].repulse?.ttl ?? 0) > 0, "repulsor did not apply debuff");
+
+  const missile = createGameState();
+  missile.phase = "combat";
+  missile.towers.push({
+    id: missile.nextId++, defId: "aaMissile", tier: 0,
+    pos: new THREE.Vector3(0, 0, 0),
+    cooldown: 0, priority: "strong", alive: true,
+  });
+  missile.enemies.push({
+    id: missile.nextId++, defId: "grunt", hp: 20,
+    pos: new THREE.Vector3(20, 90, 0),
+    alive: true, groupId: null,
+  });
+  updateTowers(missile, 1 / 60);
+  assert(missile.aaMissiles.length === 1, "AA missile tower did not launch at invader");
+
+  const drones = createGameState();
+  drones.towers.push({
+    id: drones.nextId++, defId: "drone", tier: 0,
+    pos: new THREE.Vector3(0, 0, 0),
+    cooldown: 0, priority: "first", alive: true,
+  });
+  updateDrones(drones, 1 / 60);
+  assert(drones.drones.length === 1, "T1 drone tower did not maintain one drone");
+  drones.towers[drones.towers.length - 1].tier = 1;
+  updateDrones(drones, 1 / 60);
+  assert(drones.drones.length === 2, "T2 drone tower did not maintain two drones");
+
+  console.log("PHASE 6 CHECKS PASS");
+}
+
+runPhase6Checks();
 
 const state = createGameState();
 

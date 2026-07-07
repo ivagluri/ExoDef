@@ -5,7 +5,7 @@ import { launchVolley, updateInterceptors, updateWarheads } from "./missiles";
 import { spawnBomber, spawnDiver, spawnMothership, spawnUfo, updateBombs, updateRaiders } from "./raiders";
 import { rand } from "./rng";
 import { coresAlive, toast, type GameState } from "./state";
-import { updateShells, updateTowers } from "./towers";
+import { updateAAMissiles, updateDrones, updateShells, updateTowers } from "./towers";
 import { representativeBossHpScale, representativeMissilesForRound, waveDef, waveSpawns } from "./waves";
 
 // Round flow (GAME-DESIGN.md §3): build freely → START ROUND → combat (building
@@ -124,6 +124,8 @@ export function simTick(state: GameState, dt: number): void {
   // interceptors/blasts resolve even between rounds (a shot fired at the last
   // warhead keeps flying through the round-clear moment)
   updateInterceptors(state, dt);
+  updateAAMissiles(state, dt);
+  updateDrones(state, dt);
   if (state.phase !== "combat") return;
 
   state.roundTime += dt;
