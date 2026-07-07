@@ -7,15 +7,16 @@ import { citiesAlive, toast, type Enemy, type GameState, type GruntGroup } from 
 // Grunt swarm behavior (GAME-DESIGN.md §5): loose group dives to the formation
 // band, then meanders organically while sinking. Landing = ground detonation.
 
-export function spawnGruntGroup(state: GameState, count: number, hpScale = 1, speedScale = 1): void {
+export function spawnGruntGroup(state: GameState, count: number, hpScale = 1, speedScale = 1, origin?: THREE.Vector3): void {
   const def = ENEMY_DEFS.grunt;
   const groupId = state.nextId++;
   const cols = Math.min(count, 5);
-  const anchorX = (rand() * 2 - 1) * 40;
-  const anchorZ = (rand() * 2 - 1) * 65;
+  const anchorX = origin?.x ?? (rand() * 2 - 1) * 40;
+  const anchorZ = origin?.z ?? (rand() * 2 - 1) * 65;
+  const y = origin?.y ?? GRUNT.spawnY;
   const group: GruntGroup = {
     id: groupId,
-    y: GRUNT.spawnY,
+    y,
     anchorX,
     anchorZ,
     heading: rand() * Math.PI * 2,
@@ -32,7 +33,7 @@ export function spawnGruntGroup(state: GameState, count: number, hpScale = 1, sp
       id: state.nextId++,
       defId: def.id,
       hp: Math.ceil(def.hp * hpScale),
-      pos: new THREE.Vector3(anchorX + dx, GRUNT.spawnY, anchorZ + dz),
+      pos: new THREE.Vector3(anchorX + dx, y, anchorZ + dz),
       alive: true,
       groupId,
     };

@@ -14,6 +14,8 @@ export const MODEL_COLORS = {
   diver: 0xff5a5a,
   ufo: 0xc8ccd8,
   ufoDome: 0x8fd8ff,
+  mothership: 0x8f8cff,
+  mothershipCore: 0xff5a5a,
   bomb: 0x3a2430,
   shell: 0xffd9a0,
   tracer: 0xfff6c0,
@@ -92,6 +94,20 @@ export function makeEnemyModel(defId: string): THREE.Object3D {
     const dome = new THREE.Mesh(new THREE.SphereGeometry(2.4, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), lambert(MODEL_COLORS.ufoDome));
     dome.position.y = 0.8;
     group.add(disc, dome);
+    return group;
+  }
+  if (defId === "mothership") {
+    const group = new THREE.Group();
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(18, 24, 9, 8), lambert(MODEL_COLORS.mothership));
+    const bridge = new THREE.Mesh(new THREE.BoxGeometry(16, 6, 11), lambert(MODEL_COLORS.mothership));
+    bridge.position.y = 6;
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(4, 0), lambert(MODEL_COLORS.mothershipCore));
+    core.position.y = -6;
+    const podA = new THREE.Mesh(new THREE.CylinderGeometry(3, 4, 8, 6), lambert(MODEL_COLORS.mothership));
+    podA.position.set(-14, -4, 3);
+    const podB = podA.clone();
+    podB.position.x = 14;
+    group.add(hull, bridge, core, podA, podB);
     return group;
   }
   return new THREE.Mesh(new THREE.SphereGeometry(3, 8, 6), lambert(0xff00ff));

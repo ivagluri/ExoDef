@@ -1,3 +1,4 @@
+import { MOTHERSHIP } from "../balance";
 import { TOWER_DEFS } from "../content/towers";
 import { killEnemy } from "./enemies";
 import type { Enemy, GameState, Tower } from "./state";
@@ -10,8 +11,10 @@ function pickTarget(state: GameState, tower: Tower, range: number, maxAlt: numbe
   let best: Enemy | null = null;
   let bestKey = Infinity;
   for (const enemy of state.enemies) {
-    if (!enemy.alive || enemy.pos.y > maxAlt) continue;
-    const dist = tower.pos.distanceTo(enemy.pos);
+    if (!enemy.alive) continue;
+    const hull = enemy.defId === "mothership" ? MOTHERSHIP.hullRadius : 0;
+    if (enemy.pos.y - hull > maxAlt) continue;
+    const dist = Math.max(0, tower.pos.distanceTo(enemy.pos) - hull);
     if (dist > range) continue;
     const key =
       tower.priority === "first" ? enemy.pos.y :

@@ -84,6 +84,10 @@ export const WAVE_SCALING = {
   freeplayVolleyFirstRound: 52,
   freeplayVolleyGapPattern: [2, 3] as const,
   counterforceChance: 0.25,
+  bossHpScaleWave15: 1,
+  bossHpScaleWave30: 1.75,
+  bossHpScaleWave45: 2.5,
+  bossHpScaleWave50: 3.25,
 } as const;
 
 // GAME-DESIGN.md §11.2 — placement rules
@@ -118,6 +122,28 @@ export const GRUNT = {
 
 export const CITY_HP = 2; // bomb/landing = 1 hit, warhead = 2 (§8)
 export const CITY_RADIUS = 8; // for hit tests
+
+// GAME-DESIGN.md §5/§9 — mothership boss stages [tunable]
+export const MOTHERSHIP = {
+  hp: 1200,
+  bounty: 500,
+  spawnY: 104,
+  floorY: 46,
+  descentSpeed: 0.34,
+  driftSpeed: 4.2,
+  homeRadius: 52,
+  hullRadius: 30, // towers can hit the huge hull before the center is in range
+  emitFirstDelay: 4,
+  emitPeriod: 8,
+  emitPeriodMin: 5.2,
+  emitGrunts: 4,
+  emitGruntGrowth: 2,
+  emitDiverEvery: 3,
+  emittedHpScale: 0.65,
+  emittedSpeedScale: 1.05,
+  bombAltitude: 58,
+  bombPeriod: 5.5,
+} as const;
 
 // GAME-DESIGN.md §6 — missile volleys & interception [tunable]
 export const VOLLEY = {

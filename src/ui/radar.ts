@@ -20,6 +20,7 @@ const DOT_STYLE: Record<string, { r: number; color: string }> = {
   bomber: { r: 2.6, color: "#54e05a" },
   diver: { r: 2.4, color: "#ff5a5a" },
   ufo: { r: 2.6, color: "#c8ccd8" },
+  mothership: { r: 5.2, color: "#8f8cff" },
 };
 
 export interface Radar {

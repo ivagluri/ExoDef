@@ -1,6 +1,7 @@
 import * as THREE from "three";
+import { MOTHERSHIP } from "../balance";
 import { BOMBER, DIVER, ENEMY_DEFS, UFO } from "../content/enemies";
-import { detonateAt } from "./enemies";
+import { detonateAt, spawnGruntGroup } from "./enemies";
 import { pick, rand, randRange } from "./rng";
 import type { Enemy, EnemyAI, GameState } from "./state";
 
@@ -38,8 +39,8 @@ export function spawnBomber(state: GameState, hpScale = 1): void {
   }, hpScale);
 }
 
-export function spawnDiver(state: GameState, hpScale = 1): void {
-  const pos = new THREE.Vector3(randRange(-70, 70), DIVER.spawnY, randRange(-70, 70));
+export function spawnDiver(state: GameState, hpScale = 1, origin?: THREE.Vector3): void {
+  const pos = origin?.clone() ?? new THREE.Vector3(randRange(-70, 70), DIVER.spawnY, randRange(-70, 70));
   makeEnemy(state, "diver", pos, {
     mode: "cruise",
     timer: DIVER.cruiseTime + rand() * 2,
@@ -56,6 +57,20 @@ export function spawnUfo(state: GameState, hpScale = 1): void {
     timer: 0,
     vel: new THREE.Vector3(UFO.speed * dir, 0, 0),
     target: new THREE.Vector3(),
+  }, hpScale);
+}
+
+export function spawnMothership(state: GameState, hpScale = 1): void {
+  const pos = new THREE.Vector3(0, MOTHERSHIP.spawnY, 0);
+  makeEnemy(state, "mothership", pos, {
+    mode: "boss",
+    timer: 0,
+    vel: new THREE.Vector3(randRange(-1, 1), 0, randRange(-1, 1)).normalize().multiplyScalar(MOTHERSHIP.driftSpeed),
+    target: new THREE.Vector3(),
+    emitTimer: MOTHERSHIP.emitFirstDelay,
+    emitCount: 0,
+    bombTimer: MOTHERSHIP.bombPeriod,
+    hpScale,
   }, hpScale);
 }
 
@@ -147,12 +162,74 @@ function updateUfo(enemy: Enemy, dt: number): void {
   if (Math.abs(enemy.pos.x) > UFO.edgeX) enemy.alive = false; // escaped, no bounty
 }
 
+function randomLiveStructure(state: GameState): THREE.Vector3 | null {
+  const cities = state.cities.filter((c) => c.hp > 0).map((c) => c.pos);
+  const towers = state.towers.filter((t) => t.alive).map((t) => t.pos);
+  const targets = [...cities, ...towers];
+  return targets.length > 0 ? pick(targets) : null;
+}
+
+function emitFromBoss(state: GameState, enemy: Enemy): void {
+  const ai = enemy.ai!;
+  const scale = ai.hpScale ?? 1;
+  ai.emitCount = (ai.emitCount ?? 0) + 1;
+  const origin = enemy.pos.clone().add(new THREE.Vector3(randRange(-10, 10), -18, randRange(-10, 10)));
+  const grunts = MOTHERSHIP.emitGrunts + Math.floor((scale - 1) * MOTHERSHIP.emitGruntGrowth);
+  spawnGruntGroup(
+    state,
+    grunts,
+    Math.max(1, scale * MOTHERSHIP.emittedHpScale),
+    MOTHERSHIP.emittedSpeedScale,
+    origin,
+  );
+  if (ai.emitCount % MOTHERSHIP.emitDiverEvery === 0) {
+    spawnDiver(state, Math.max(1, scale * MOTHERSHIP.emittedHpScale), origin.clone().setY(Math.max(70, enemy.pos.y - 12)));
+  }
+  toastBoss(state, `${grunts}${ai.emitCount % MOTHERSHIP.emitDiverEvery === 0 ? "+1" : ""} RAIDERS LAUNCHED`);
+}
+
+function toastBoss(state: GameState, text: string): void {
+  if (state.messageTtl <= 0.2 || !state.message.includes("MISSILE")) {
+    state.message = `MOTHERSHIP — ${text}`;
+    state.messageTtl = 2.5;
+  }
+}
+
+function updateMothership(state: GameState, enemy: Enemy, dt: number): void {
+  const ai = enemy.ai!;
+  const dist = Math.hypot(enemy.pos.x, enemy.pos.z);
+  if (dist > MOTHERSHIP.homeRadius) {
+    ai.vel.set(-enemy.pos.x, 0, -enemy.pos.z).normalize().multiplyScalar(MOTHERSHIP.driftSpeed);
+  } else if (state.tick % 180 === 0) {
+    ai.vel.set(randRange(-1, 1), 0, randRange(-1, 1)).normalize().multiplyScalar(MOTHERSHIP.driftSpeed);
+  }
+  enemy.pos.addScaledVector(ai.vel, dt);
+  enemy.pos.y = Math.max(MOTHERSHIP.floorY, enemy.pos.y - MOTHERSHIP.descentSpeed * dt);
+
+  ai.emitTimer = (ai.emitTimer ?? MOTHERSHIP.emitPeriod) - dt;
+  if (ai.emitTimer <= 0) {
+    const scale = ai.hpScale ?? 1;
+    ai.emitTimer = Math.max(MOTHERSHIP.emitPeriodMin, MOTHERSHIP.emitPeriod / Math.sqrt(scale));
+    emitFromBoss(state, enemy);
+  }
+
+  if (enemy.pos.y <= MOTHERSHIP.bombAltitude) {
+    ai.bombTimer = (ai.bombTimer ?? MOTHERSHIP.bombPeriod) - dt;
+    if (ai.bombTimer <= 0) {
+      ai.bombTimer = MOTHERSHIP.bombPeriod;
+      const target = randomLiveStructure(state);
+      if (target) state.bombs.push({ id: state.nextId++, pos: target.clone().setY(enemy.pos.y - 8), alive: true });
+    }
+  }
+}
+
 export function updateRaiders(state: GameState, dt: number): void {
   for (const enemy of state.enemies) {
     if (!enemy.alive || !enemy.ai) continue;
     if (enemy.defId === "bomber") updateBomber(state, enemy, dt);
     else if (enemy.defId === "diver") updateDiver(state, enemy, dt);
     else if (enemy.defId === "ufo") updateUfo(enemy, dt);
+    else if (enemy.defId === "mothership") updateMothership(state, enemy, dt);
   }
   state.enemies = state.enemies.filter((e) => e.alive);
 }

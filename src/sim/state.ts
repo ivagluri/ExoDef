@@ -37,6 +37,10 @@ export interface EnemyAI {
   target: THREE.Vector3;
   targetKind?: "city" | "tower";
   targetId?: number; // city index or tower id
+  emitCount?: number;
+  emitTimer?: number;
+  bombTimer?: number;
+  hpScale?: number;
 }
 
 export interface Enemy {

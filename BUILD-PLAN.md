@@ -11,9 +11,9 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 4 COMPLETE and user-playtested (fixes applied same session) — Phase 5 (full arc & polish) is next** (updated 2026-07-07)
+**Status: Phase 5 IN PROGRESS — waves/freeplay/victory and mothership bosses implemented; audio/art/settings/upgrade-preview polish next** (updated 2026-07-07)
 
-> **Resume here (fresh context):** read GAME-DESIGN.md first (§9 waves 16–50 formula, §5 mothership, §12 audio/art) then implement Phase 5 per its checklist below. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is now titled **EXODEF**. Still open from §15: default fire scheme (Q1) and all Phase 6 tuning items.
+> **Resume here (fresh context):** read GAME-DESIGN.md first, then continue Phase 5 with the remaining polish checklist: audio pass (§12), art pass, settings panel (fire scheme/game speed/volume), and upgrade-preview UI. Waves 16–50/freeplay/victory, bonus cities, and mothership boss stages are implemented. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is titled **EXODEF**. Still open from §15: default fire scheme (Q1) and all Phase 6 tuning items.
 
 ---
 
@@ -78,10 +78,10 @@ Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additi
 
 ## Phase 5 — Full arc & polish
 
-- [ ] Formula waves 16–50 + authored wave-50 finale + victory screen; freeplay 51+ (§9)
-- [ ] Spawn-spread parameter: delivery gets irregular/staggered as waves rise, same volume (§9, playtest 2026-07-07) — may retroactively loosen waves ~10–15
-- [ ] **Boss stages** (§5 mothership, §9): mega enemy at waves 15/30/45 that descends slowly and emits grunts/divers, escalating per appearance; wave 50 finale = boss + max volley. Note: wave 15's current grunt/bomber composition in `src/sim/waves.ts` gets replaced by the boss. (User idea, added 2026-07-07)
-- [ ] Bonus cities at every ×10 milestone
+- [x] Formula waves 16–50 + authored wave-50 finale + victory screen; freeplay 51+ (§9)
+- [x] Spawn-spread parameter: delivery gets irregular/staggered as waves rise, same volume (§9, playtest 2026-07-07) — may retroactively loosen waves ~10–15
+- [x] **Boss stages** (§5 mothership, §9): mega enemy at waves 15/30/45 that descends slowly and emits grunts/divers, escalating per appearance; wave 50 finale = boss + max volley. Note: wave 15's current grunt/bomber composition in `src/sim/waves.ts` gets replaced by the boss. (User idea, added 2026-07-07)
+- [x] Bonus cities at every ×10 milestone
 - [ ] Audio: WebAudio synth cues — siren (the star), gun/flak/launch/blast/city-drone/round-sting/UFO warble (§12)
 - [ ] Art pass: palette compliance, warhead ribbon trails, blast icosphere, damaged-city states, UFO model
 - [ ] Settings panel (fire scheme toggle — absorb the [F] hotkey; game speed; volume); localStorage high score
@@ -116,3 +116,4 @@ Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
 - **2026-07-07** — Phase 4 complete: missile sim (`src/sim/missiles.ts` — volleys, bézier warheads, batteries, interceptors, blast kill check), coordinate view (`src/render/coordview.ts` — dual ortho viewports, volley frame, 0.6s swing, both aim schemes, [F] toggle), radar overlay (`src/ui/radar.ts`), siren stub (`src/ui/siren.ts`), alert banner + coord HUD strip in `hud.ts`. Central battery pre-placed with wake light. Smoke auto-player now leads shots along warhead arcs: waves 1–15 clear 6/6 cities, all 12 warheads intercepted, counterforce at 15 included. `npm run build` clean.
 - **2026-07-07 (playtest + wrap)** — User playtested Phase 4 live; all findings fixed in-session: **radar invisible** (canvas was created before `createHud()`'s innerHTML rebuild → drew to a detached element; also brightened band grid + window-scaled panel/labels 1×–1.6×); **top view empty for half of each volley** (entry moved from 260u-behind-target to fixed depth just past the platform edge, top viewport made asymmetric — V_BACK 165 / V_FRONT 115, §6.1 updated). Added **3× fast-forward** ([X]/HUD button; auto-resets to 1× at volley launch — keeps the siren moment honest). **Retitled EXODEF** with an EXODEF COMMAND playfield mark (arcade-style, HUD tag). Backlog grew: orbital-platform reframe + Bloons-style bypass lives, converging multi-heading volleys, branding (resolved). **Next agent: Phase 5** — waves 16–50 formula + spawn-spread, mothership boss (replaces wave 15's current composition), wave-50 finale + victory, audio pass (real siren), art pass, settings panel (absorb the [F]/[X] toggles), upgrade preview. Watch: boss at 15/30/45 escalation; §15 Q1 (default scheme) still undecided — user playtests will tell.
 - **2026-07-07 (Phase 5 chunk 1)** — Implemented deterministic formula waves 16–50 plus freeplay generation, scaling HP/speed spawn metadata, generated missile scheduling, wave-50 victory/freeplay overlay, and wave-50 survivor score bonus. Extended smoke auto-player to spend late-game cash on more towers and backup batteries. Not done yet: mothership bosses, authored boss+max-volley finale, audio/art/settings/upgrade-preview work. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cities.
+- **2026-07-07 (Phase 5 chunk 2)** — Implemented mothership boss as a normal targetable enemy (`mothership` def + flat-shaded model + radar dot): large hull targeting, slow descent/roam, grunt/diver emissions from underside, low-altitude bomb drops, and escalating HP for waves 15/30/45/50. Wave 15 now replaces the old normal composition with boss + counterforce volley; wave 50 is boss + max volley. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cities.

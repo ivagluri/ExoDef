@@ -2,7 +2,7 @@ import { CITY_HP, ECONOMY, SCORE, WAVE_GOAL } from "../balance";
 import { UFO } from "../content/enemies";
 import { spawnGruntGroup, updateGroups } from "./enemies";
 import { launchVolley, updateInterceptors, updateWarheads } from "./missiles";
-import { spawnBomber, spawnDiver, spawnUfo, updateBombs, updateRaiders } from "./raiders";
+import { spawnBomber, spawnDiver, spawnMothership, spawnUfo, updateBombs, updateRaiders } from "./raiders";
 import { rand } from "./rng";
 import { citiesAlive, toast, type GameState } from "./state";
 import { updateShells, updateTowers } from "./towers";
@@ -40,6 +40,7 @@ function spawnPending(state: GameState): void {
     else if (entry.enemy === "bomber") for (let i = 0; i < entry.count; i++) spawnBomber(state, hp);
     else if (entry.enemy === "diver") for (let i = 0; i < entry.count; i++) spawnDiver(state, hp);
     else if (entry.enemy === "ufo") spawnUfo(state, hp);
+    else if (entry.enemy === "mothership") for (let i = 0; i < entry.count; i++) spawnMothership(state, hp);
   }
 }
 

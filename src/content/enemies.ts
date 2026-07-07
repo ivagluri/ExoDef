@@ -1,10 +1,12 @@
+import { MOTHERSHIP } from "../balance";
+
 // Data-driven enemy definitions (GAME-DESIGN.md §5). All numbers [tunable].
 
 export interface EnemyDef {
   id: string;
   hp: number;
   bounty: number;
-  behavior: "formationDrift" | "seekAndBomb" | "plunge" | "transit";
+  behavior: "formationDrift" | "seekAndBomb" | "plunge" | "transit" | "boss";
 }
 
 export const ENEMY_DEFS: Record<string, EnemyDef> = {
@@ -12,6 +14,7 @@ export const ENEMY_DEFS: Record<string, EnemyDef> = {
   bomber: { id: "bomber", hp: 60, bounty: 25, behavior: "seekAndBomb" },
   diver: { id: "diver", hp: 15, bounty: 15, behavior: "plunge" },
   ufo: { id: "ufo", hp: 80, bounty: 150, behavior: "transit" },
+  mothership: { id: "mothership", hp: MOTHERSHIP.hp, bounty: MOTHERSHIP.bounty, behavior: "boss" },
 };
 
 // Behavior numbers [tunable]

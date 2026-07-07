@@ -13,6 +13,7 @@ export interface WaveDef {
 const g = (at: number, count: number): PendingSpawn => ({ at, enemy: "grunt", count });
 const b = (at: number, count = 1): PendingSpawn => ({ at, enemy: "bomber", count });
 const d = (at: number, count: number): PendingSpawn => ({ at, enemy: "diver", count });
+const m = (at: number, hpScale: number): PendingSpawn => ({ at, enemy: "mothership", count: 1, hpScale });
 
 const AUTHORED_WAVES: WaveDef[] = [
   { spawns: [g(1, 6)] },
@@ -29,7 +30,7 @@ const AUTHORED_WAVES: WaveDef[] = [
   { spawns: [g(1, 6), g(7, 6), g(13, 6), b(8), b(14), b(20)], missiles: { warheads: 3 } },
   { spawns: [g(1, 7), g(5, 7), g(10, 7), g(15, 7), b(8), b(12), b(18), b(24), d(20, 4)] },
   { spawns: [g(1, 8), g(6, 8), g(12, 8), b(6), b(12), b(18), b(24), d(10, 3), d(20, 3)] },
-  { spawns: [g(1, 7), g(7, 7), g(13, 6), b(10), b(16), b(22)], missiles: { warheads: 4, counterforce: true } },
+  { spawns: [m(1, WAVE_SCALING.bossHpScaleWave15)], missiles: { warheads: 4, counterforce: true } },
 ];
 
 export const WAVE_COUNT = WAVE_GOAL;
@@ -147,7 +148,27 @@ function missileDef(round: number): WaveDef["missiles"] {
   return { warheads: warheadsFor(round), counterforce };
 }
 
+function bossHpScale(round: number): number {
+  if (round === 15) return WAVE_SCALING.bossHpScaleWave15;
+  if (round === 30) return WAVE_SCALING.bossHpScaleWave30;
+  if (round === 45) return WAVE_SCALING.bossHpScaleWave45;
+  if (round === WAVE_GOAL) return WAVE_SCALING.bossHpScaleWave50;
+  return 1;
+}
+
+function isBossRound(round: number): boolean {
+  return round === 15 || round === 30 || round === 45 || round === WAVE_GOAL;
+}
+
+function bossWave(round: number): WaveDef {
+  return {
+    spawns: [m(1, bossHpScale(round))],
+    missiles: missileDef(round),
+  };
+}
+
 function generatedWave(round: number): WaveDef {
+  if (isBossRound(round)) return bossWave(round);
   const volume = countScale(round);
   const hp = hpScale(round);
   const spread = spawnSpread(round);
