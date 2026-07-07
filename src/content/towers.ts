@@ -27,10 +27,12 @@ export const TOWER_DEFS: Record<string, TowerDef> = {
     cost: 150,
     hotkey: "1",
     role: "direct",
+    // Rebalanced per 2026-07-07 playtest: long reach, weak hits (chip damage from
+    // the moment swarms settle into the formation band); flak owns kill power.
     tiers: [
-      { upgradeCost: 0, rangeRadius: 45, maxAltitude: 40, shot: { damage: 3, period: 0.25 } }, // 12 dps
-      { upgradeCost: 120, rangeRadius: 55, maxAltitude: 40, shot: { damage: 5, period: 0.25 } }, // 20 dps
-      { upgradeCost: 250, rangeRadius: 55, maxAltitude: 55, shot: { damage: 8, period: 0.25 } }, // 32 dps, clips MID
+      { upgradeCost: 0, rangeRadius: 80, maxAltitude: 90, shot: { damage: 2, period: 0.25 } }, // 8 dps
+      { upgradeCost: 120, rangeRadius: 90, maxAltitude: 100, shot: { damage: 4, period: 0.25 } }, // 16 dps
+      { upgradeCost: 250, rangeRadius: 100, maxAltitude: 110, shot: { damage: 6, period: 0.25 } }, // 24 dps
     ],
   },
   flak: {

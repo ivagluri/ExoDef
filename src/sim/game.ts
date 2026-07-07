@@ -1,8 +1,11 @@
-import { ECONOMY, SCORE } from "../balance";
+import { CITY_HP, ECONOMY, SCORE } from "../balance";
+import { UFO } from "../content/enemies";
 import { spawnGruntGroup, updateGroups } from "./enemies";
+import { spawnBomber, spawnDiver, spawnUfo, updateBombs, updateRaiders } from "./raiders";
+import { rand } from "./rng";
 import { citiesAlive, toast, type GameState } from "./state";
 import { updateShells, updateTowers } from "./towers";
-import { WAVE_COUNT, waveSpawns } from "./waves";
+import { WAVE_COUNT, waveDef, waveSpawns } from "./waves";
 
 // Round flow (GAME-DESIGN.md §3): build freely → START ROUND → combat (building
 // still allowed) → wave clear → city income → build. Player-paced.
@@ -10,7 +13,7 @@ import { WAVE_COUNT, waveSpawns } from "./waves";
 export function startRound(state: GameState): boolean {
   if (state.phase !== "build") return false;
   if (state.round >= WAVE_COUNT) {
-    toast(state, `PHASE 2 CONTENT ENDS AT WAVE ${WAVE_COUNT} — MORE IN PHASE 3`);
+    toast(state, `PHASE 3 CONTENT ENDS AT WAVE ${WAVE_COUNT} — WAVES 16–50 ARRIVE IN PHASE 5`);
     return false;
   }
   if (state.round > 0 && state.simTime - state.roundClearedAt <= ECONOMY.earlyStartWindow) {
@@ -20,6 +23,17 @@ export function startRound(state: GameState): boolean {
   state.round++;
   state.roundTime = 0;
   state.pending = waveSpawns(state.round);
+
+  // bonus UFO chance (§9)
+  if (state.round >= UFO.firstRound && rand() < UFO.chancePerRound) {
+    state.pending.push({ at: 8 + rand() * 15, enemy: "ufo", count: 1 });
+    state.pending.sort((a, b) => a.at - b.at);
+  }
+
+  // Phase 4 will launch real volleys here; until then the warning is a stub
+  if (waveDef(state.round)?.missiles) {
+    toast(state, "⚠ MISSILE LAUNCH DETECTED — INTERCEPTION SYSTEMS OFFLINE (PHASE 4) ⚠", 6);
+  }
   state.phase = "combat";
   return true;
 }
@@ -28,17 +42,30 @@ function spawnPending(state: GameState): void {
   while (state.pending.length > 0 && state.pending[0].at <= state.roundTime) {
     const entry = state.pending.shift()!;
     if (entry.enemy === "grunt") spawnGruntGroup(state, entry.count);
+    else if (entry.enemy === "bomber") for (let i = 0; i < entry.count; i++) spawnBomber(state);
+    else if (entry.enemy === "diver") for (let i = 0; i < entry.count; i++) spawnDiver(state);
+    else if (entry.enemy === "ufo") spawnUfo(state);
   }
 }
 
 function checkRoundClear(state: GameState): void {
-  if (state.pending.length > 0 || state.enemies.length > 0) return;
+  if (state.pending.length > 0 || state.enemies.length > 0 || state.bombs.length > 0) return;
   state.phase = "build";
   state.roundClearedAt = state.simTime;
   const income = citiesAlive(state) * ECONOMY.cityIncome;
   state.cash += income;
   state.score += SCORE.roundClearPerWave * state.round;
   toast(state, `ROUND ${state.round} CLEAR — INCOME +$${income}`);
+
+  // bonus city at milestones (§8: Missile Command's mercy rule)
+  if (state.round % 10 === 0) {
+    const ruin = state.cities.find((c) => c.hp <= 0);
+    if (ruin) {
+      ruin.hp = CITY_HP;
+      state.citiesDirty = true;
+      toast(state, "REINFORCEMENTS — CITY REBUILT", 5);
+    }
+  }
 }
 
 function ageEffects(state: GameState, dt: number): void {
@@ -58,6 +85,8 @@ export function simTick(state: GameState, dt: number): void {
   state.roundTime += dt;
   spawnPending(state);
   updateGroups(state, dt);
+  updateRaiders(state, dt);
+  updateBombs(state, dt);
   updateTowers(state, dt);
   updateShells(state, dt);
   checkRoundClear(state);

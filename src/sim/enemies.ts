@@ -1,18 +1,11 @@
 import * as THREE from "three";
 import { CITY_RADIUS, GRUNT } from "../balance";
 import { ENEMY_DEFS } from "../content/enemies";
+import { rand } from "./rng";
 import { citiesAlive, toast, type Enemy, type GameState, type GruntGroup } from "./state";
 
-// Grunt formation behavior (GAME-DESIGN.md §5): loose group spawns at ENTRY,
-// drifts laterally, reverses at bounds (dropping altitude), also steps down on a
-// timer — a loose echo of the Space Invaders march. Landing = ground detonation.
-
-let seedCounter = 7;
-function rand(): number {
-  // deterministic-enough spread; real seeded RNG not needed for spawns
-  seedCounter = (seedCounter * 16807) % 2147483647;
-  return seedCounter / 2147483647;
-}
+// Grunt swarm behavior (GAME-DESIGN.md §5): loose group dives to the formation
+// band, then meanders organically while sinking. Landing = ground detonation.
 
 export function spawnGruntGroup(state: GameState, count: number): void {
   const def = ENEMY_DEFS.grunt;
@@ -56,16 +49,17 @@ export function killEnemy(state: GameState, enemy: Enemy): void {
   state.score += def.bounty;
 }
 
-function detonateAt(state: GameState, pos: THREE.Vector3): void {
-  state.effects.blasts.push({ pos: pos.clone().setY(2), radius: GRUNT.detonateRadius, ttl: 0.6, maxTtl: 0.6 });
+/** Ground detonation: destroys towers in radius, deals 1 hit to cities in radius. */
+export function detonateAt(state: GameState, pos: THREE.Vector3, radius: number = GRUNT.detonateRadius): void {
+  state.effects.blasts.push({ pos: pos.clone().setY(2), radius, ttl: 0.6, maxTtl: 0.6 });
   for (const tower of state.towers) {
-    if (tower.alive && tower.pos.distanceTo(pos) <= GRUNT.detonateRadius + 4) {
+    if (tower.alive && tower.pos.distanceTo(pos) <= radius + 4) {
       tower.alive = false;
       toast(state, "TOWER DESTROYED");
     }
   }
   for (const city of state.cities) {
-    if (city.hp > 0 && city.pos.distanceTo(pos) <= GRUNT.detonateRadius + CITY_RADIUS) {
+    if (city.hp > 0 && city.pos.distanceTo(pos) <= radius + CITY_RADIUS) {
       damageCity(state, city.index, 1);
     }
   }

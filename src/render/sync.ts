@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { GameState } from "../sim/state";
-import { makeBlastModel, makeEnemyModel, makeShellModel, makeTowerModel, MODEL_COLORS } from "./models";
+import { makeBlastModel, makeBombModel, makeEnemyModel, makeShellModel, makeTowerModel, MODEL_COLORS } from "./models";
 
 // Reconciles sim entity arrays with Three.js objects each frame (§13).
 // The sim owns truth; this module only mirrors it.
@@ -9,6 +9,7 @@ export class RenderSync {
   private towerObjs = new Map<number, THREE.Object3D>();
   private enemyObjs = new Map<number, THREE.Object3D>();
   private shellObjs = new Map<number, THREE.Object3D>();
+  private bombObjs = new Map<number, THREE.Object3D>();
   private blastObjs = new Map<object, THREE.Mesh>();
   private tracerObjs = new Map<object, THREE.Line>();
   private tracerMat = new THREE.LineBasicMaterial({
@@ -46,6 +47,13 @@ export class RenderSync {
       (s) => s.id,
       () => makeShellModel(),
       (s, obj) => obj.position.copy(s.pos),
+    );
+    this.reconcile(
+      this.bombObjs,
+      state.bombs.filter((b) => b.alive),
+      (b) => b.id,
+      () => makeBombModel(),
+      (b, obj) => obj.position.copy(b.pos),
     );
     this.syncBlasts(state);
     this.syncTracers(state);

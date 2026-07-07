@@ -103,15 +103,15 @@ Towers occupy a circular footprint (radius 6 u), placed freely on open ground (�
 
 | Tower | Cost | Range radius | Altitude reach | Damage | Notes |
 |---|---|---|---|---|---|
-| **Gun turret** | $150 | 45 | LOW (≤40) | 3 dmg × 4/s = 12 DPS, single target | Cheap, spammable, the floor of your defense |
-| **Flak cannon** | $300 | 60 | MID (≤80) | 15 dmg burst / 1.5s, 8 u AoE radius | The workhorse vs. grouped grunts |
+| **Gun turret** | $150 | 80 | ≤90 (near formation band) | 2 dmg × 4/s = 8 DPS, single target | Long reach, weak hits — chip coverage. *(Rebalanced after 2026-07-07 playtest: original short-range version left minutes of dead time before contact.)* |
+| **Flak cannon** | $300 | 60 | MID (≤80) | 15 dmg burst / 1.5s, 8 u AoE radius | The kill power vs. grouped grunts — shorter reach than gun, way harder hits |
 | **Missile battery** | $500 (first free) | interception only | any (via missile view) | blast kills warheads | See §6. Does NOT auto-fire at invaders |
 
 ### Upgrade tiers (each tower: 2 upgrade tiers, applied per-tower)
 
 | Tower | Tier 2 | Tier 3 |
 |---|---|---|
-| Gun | $120 → 20 DPS, range 55 | $250 → 32 DPS, reach ≤55 (clips MID) |
+| Gun | $120 → 16 DPS, range 90, reach ≤100 | $250 → 24 DPS, range 100, reach ≤110 |
 | Flak | $250 → burst / 1.1s, AoE 10 | $450 → 25 dmg, reach ≤95 (clips HIGH) |
 | Battery | $400 → reload 2s, blast r16, speed 80, ammo 8 | $700 → twin silo (2 interceptors in flight), blast r20, speed 100, ammo 10 |
 

@@ -24,6 +24,17 @@ export interface Tower {
   alive: boolean;
 }
 
+/** Per-enemy behavior state for individually-moving enemies (bomber/diver/ufo). */
+export interface EnemyAI {
+  mode: string;
+  timer: number;
+  vel: THREE.Vector3;
+  /** current destination / plunge impact point */
+  target: THREE.Vector3;
+  targetKind?: "city" | "tower";
+  targetId?: number; // city index or tower id
+}
+
 export interface Enemy {
   id: number;
   defId: string;
@@ -31,6 +42,13 @@ export interface Enemy {
   pos: THREE.Vector3;
   alive: boolean;
   groupId: number | null;
+  ai?: EnemyAI;
+}
+
+export interface Bomb {
+  id: number;
+  pos: THREE.Vector3;
+  alive: boolean;
 }
 
 export interface GruntGroup {
@@ -81,6 +99,7 @@ export interface GameState {
   enemies: Enemy[];
   groups: GruntGroup[];
   shells: Shell[];
+  bombs: Bomb[];
   effects: Effects;
   nextId: number;
   message: string;
@@ -108,6 +127,7 @@ export function createGameState(): GameState {
     enemies: [],
     groups: [],
     shells: [],
+    bombs: [],
     effects: { tracers: [], blasts: [] },
     nextId: 1,
     message: "",

@@ -2,16 +2,15 @@ import * as THREE from "three";
 import { CITY_POSITIONS, PLACEMENT } from "../balance";
 import { TOWER_DEFS } from "../content/towers";
 import { makeGhost, makeRangeDome } from "../render/models";
-import { toast, type GameState, type Priority, type Tower } from "../sim/state";
+import { toast, type GameState, type Tower } from "../sim/state";
 
 // Tower placement (GAME-DESIGN.md §11.2): pick from build bar → ghost + range dome
 // follows cursor, green/red validity → left-click places, ESC/right-click cancels.
-// Clicking a placed tower (no selection active) cycles its targeting priority.
-
-const PRIORITY_ORDER: Priority[] = ["first", "strong", "close"];
+// Clicking a placed tower (no build selection active) opens its upgrade panel.
 
 export class PlacementInput {
   selection: string | null = null;
+  selectedTowerId: number | null = null;
   private ghost: { object: THREE.Group; setValid: (v: boolean) => void } | null = null;
   private dome: THREE.Mesh | null = null;
   private groundPoint = new THREE.Vector3();
@@ -32,7 +31,10 @@ export class PlacementInput {
       if (ev.button === 2 && this.selection) this.select(null);
     });
     window.addEventListener("keydown", (ev) => {
-      if (ev.code === "Escape") this.select(null);
+      if (ev.code === "Escape") {
+        this.select(null);
+        this.selectedTowerId = null;
+      }
       for (const def of Object.values(TOWER_DEFS)) {
         if (ev.key === def.hotkey) this.select(this.selection === def.id ? null : def.id);
       }
@@ -121,14 +123,13 @@ export class PlacementInput {
       return;
     }
 
-    // no selection: click near a tower cycles its targeting priority
+    // no build selection: click near a tower opens its panel, empty ground closes it
     for (const tower of this.state.towers) {
       if (tower.alive && Math.hypot(this.groundPoint.x - tower.pos.x, this.groundPoint.z - tower.pos.z) < 8) {
-        const next = PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(tower.priority) + 1) % PRIORITY_ORDER.length];
-        tower.priority = next;
-        toast(this.state, `${TOWER_DEFS[tower.defId].name}: TARGET ${next.toUpperCase()}`);
+        this.selectedTowerId = tower.id;
         return;
       }
     }
+    this.selectedTowerId = null;
   }
 }

@@ -1,15 +1,21 @@
 import { BUILDABLE, TOWER_DEFS } from "../content/towers";
+import { sellRefund, towerById, upgradeCost } from "../sim/actions";
 import { citiesAlive, type GameState } from "../sim/state";
+import { waveDef } from "../sim/waves";
 
-// HTML overlay HUD (GAME-DESIGN.md §11.1): top bar, build bar, start button, toast.
+// HTML overlay HUD (GAME-DESIGN.md §11.1): top bar, build bar, start button,
+// toast, tower panel (upgrade/sell/priority), game-over overlay.
 
 export interface Hud {
-  update(state: GameState, selection: string | null): void;
+  update(state: GameState, selection: string | null, selectedTowerId: number | null): void;
 }
 
 export function createHud(handlers: {
   onStart: () => void;
   onSelect: (id: string | null) => void;
+  onUpgrade: () => void;
+  onSell: () => void;
+  onPriority: () => void;
 }): Hud {
   const hud = document.getElementById("hud")!;
   hud.innerHTML = `
@@ -44,6 +50,12 @@ export function createHud(handlers: {
       }
       #hud .gameover small { font-size: 14px; color: #d7dce8; letter-spacing: 0.08em; }
       #hud .tag { position: absolute; left: 12px; bottom: 54px; font-size: 11px; opacity: 0.45; }
+      #hud .panel {
+        position: absolute; right: 14px; bottom: 60px; display: flex;
+        flex-direction: column; gap: 6px; padding: 10px 12px;
+        background: #141b31d9; border: 1px solid #3a4568; border-radius: 6px;
+        font-size: 13px;
+      }
     </style>
     <div class="bar top">
       <span data-el="cash"></span>
@@ -55,12 +67,18 @@ export function createHud(handlers: {
       <button class="start" data-el="start">▶ START ROUND 1</button>
     </div>
     <div class="toast" data-el="toast"></div>
+    <div class="panel" data-el="panel" style="display:none">
+      <div data-el="ptitle" style="letter-spacing:0.1em"></div>
+      <button data-el="pupgrade"></button>
+      <button data-el="psell"></button>
+      <button data-el="ppriority"></button>
+    </div>
     <div class="gameover" data-el="gameover">
       ALL CITIES LOST
       <small data-el="finalscore"></small>
       <small>reload the page to try again</small>
     </div>
-    <div class="tag">SKYFALL dev · phase 2 · 1/2 build · click tower: priority · Q/E rotate · scroll zoom · Enter: start</div>
+    <div class="tag">SKYFALL dev · phase 3 · 1/2 build · click tower: panel · Q/E rotate · scroll zoom · Enter: start</div>
   `;
 
   const el = (name: string) => hud.querySelector<HTMLElement>(`[data-el="${name}"]`)!;
@@ -76,9 +94,12 @@ export function createHud(handlers: {
   }
   const startBtn = el("start") as HTMLButtonElement;
   startBtn.addEventListener("click", () => handlers.onStart());
+  el("pupgrade").addEventListener("click", () => handlers.onUpgrade());
+  el("psell").addEventListener("click", () => handlers.onSell());
+  el("ppriority").addEventListener("click", () => handlers.onPriority());
 
   return {
-    update(state: GameState, selection: string | null): void {
+    update(state: GameState, selection: string | null, selectedTowerId: number | null): void {
       el("cash").textContent = `$${state.cash}`;
       el("round").textContent = state.round === 0 ? "PLACE YOUR DEFENSES" : `ROUND ${state.round}`;
       el("right").textContent = `⌂ ${citiesAlive(state)}/6 · SCORE ${state.score}`;
@@ -87,10 +108,26 @@ export function createHud(handlers: {
         btn.disabled = state.cash < TOWER_DEFS[id].cost && selection !== id;
       }
       startBtn.style.display = state.phase === "build" ? "" : "none";
-      startBtn.textContent = `▶ START ROUND ${state.round + 1}`;
+      const nextMissiles = waveDef(state.round + 1)?.missiles;
+      startBtn.textContent = `▶ START ROUND ${state.round + 1}${nextMissiles ? " ⚠ MISSILES" : ""}`;
       const toastEl = el("toast");
       toastEl.textContent = state.message;
       toastEl.style.opacity = state.messageTtl > 0 ? "1" : "0";
+
+      // tower panel
+      const tower = selectedTowerId !== null ? towerById(state, selectedTowerId) : undefined;
+      el("panel").style.display = tower ? "flex" : "none";
+      if (tower) {
+        const def = TOWER_DEFS[tower.defId];
+        el("ptitle").textContent = `${def.name} T${tower.tier + 1}`;
+        const upBtn = el("pupgrade") as HTMLButtonElement;
+        const cost = upgradeCost(tower);
+        upBtn.textContent = cost === null ? "MAX TIER" : `UPGRADE $${cost}`;
+        upBtn.disabled = cost === null || state.cash < cost;
+        el("psell").textContent = `SELL +$${sellRefund(tower)}`;
+        el("ppriority").textContent = `TARGET: ${tower.priority.toUpperCase()}`;
+      }
+
       if (state.phase === "gameover") {
         el("gameover").style.display = "flex";
         el("finalscore").textContent = `FINAL SCORE ${state.score} — REACHED ROUND ${state.round}`;

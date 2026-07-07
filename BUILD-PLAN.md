@@ -9,7 +9,7 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 2 COMPLETE — Phase 3 is next** (updated 2026-07-07)
+**Status: Phase 3 COMPLETE — Phase 4 (missile interception, the signature mechanic) is next** (updated 2026-07-07)
 
 ---
 
@@ -42,15 +42,15 @@ Playable tower defense vs grunts, waves 1–4.
 
 **DoD:** user can place guns/flak, start rounds 1–4, kill grunts, earn cash, lose towers/cities to landings.
 
-## Phase 3 — Full ground game
+## Phase 3 — Full ground game ✅ (2026-07-07)
 
 Waves 1–15 minus missiles; upgrades; win/lose framing.
 
-- [ ] Bomber (seek + hover + bomb drops), diver (plunge), bonus UFO (high transit) per §5
-- [ ] Tower upgrades (tier 2/3), sell at 70%, targeting-priority UI on tower panel (§4)
-- [ ] Waves 1–15 authored table (§9); volley waves spawn their ground portion, missiles stubbed with a placeholder banner
-- [ ] Bonus-city milestone at wave 10 (§8)
-- [ ] Game over (last city dies) + score screen; score accounting (§3)
+- [x] Bomber (seek + hover + bomb drops), diver (plunge), bonus UFO (high transit) per §5 — `src/sim/raiders.ts`
+- [x] Tower upgrades (tier 2/3), sell at 70%, targeting-priority UI on tower panel (§4) — `src/sim/actions.ts`, HUD panel
+- [x] Waves 1–15 authored table (§9); volley waves spawn their ground portion, missiles stubbed with a warning banner + ⚠ on the start button
+- [x] Bonus-city milestone at wave 10 (§8)
+- [x] Game over (last city dies) + score screen; score accounting (§3)
 
 **DoD:** waves 1–15 playable end-to-end (missiles stubbed); losing and winning states work.
 
@@ -90,4 +90,5 @@ Driven by user playtests against GAME-DESIGN.md §15's open questions. No new sy
 
 - **2026-07-07** — Design doc completed and approved. Build plan created. Phase 1 started.
 - **2026-07-07** — Phase 1 complete: scaffold, world render, orbit camera, sim loop. `npm run build` clean, dev server verified. Note: Node.js was installed via Homebrew this session (machine had none). Files: `src/{main,balance}.ts`, `src/render/{scene,cameras}.ts`, `src/input/orbit.ts`, `src/sim/state.ts`, `src/ui/hud.ts`. Await user playtest of the diorama before/while starting Phase 2.
-- **2026-07-07** — Phase 2 complete: sim entities + game orchestration (`src/sim/{game,waves,enemies,towers}.ts`), placement input, render sync, full HUD. Headless smoke test added (`npm run smoke`, uses tsx) — run it after sim changes. **User playtest feedback applied:** grunt movement felt rigid (axis-locked Space Invaders march) → replaced with organic meander (wandering heading + continuous swelling sink + per-member bob); GAME-DESIGN.md §5 updated to match. Also: grunts fast-dive from ENTRY to y=100 before meandering (pacing — literal spec meant minutes of dead time). Phase 3 note: wave 4 currently has stand-in grunts where its bomber belongs.
+- **2026-07-07** — Phase 2 complete: sim entities + game orchestration (`src/sim/{game,waves,enemies,towers}.ts`), placement input, render sync, full HUD. Headless smoke test added (`npm run smoke`, uses tsx) — run it after sim changes. **User playtest feedback applied:** grunt movement felt rigid (axis-locked Space Invaders march) → replaced with organic meander (wandering heading + continuous swelling sink + per-member bob); GAME-DESIGN.md §5 updated to match. Also: grunts fast-dive from ENTRY to y=100 before meandering (pacing — literal spec meant minutes of dead time).
+- **2026-07-07** — Phase 3 complete: bomber/diver/UFO (`src/sim/raiders.ts` + bombs), upgrade/sell/priority via tower panel (`src/sim/actions.ts`), waves 1–15 (volleys stubbed as warnings), bonus city at wave 10, shared RNG (`src/sim/rng.ts`). **Second playtest feedback applied:** gun rebalanced to long-range/weak (range 80/alt 90, 8 dps T1) vs flak short-range/heavy — user found original gun range left ~1 min dead time; GAME-DESIGN.md §4 updated. Smoke test is now an auto-player that clears all 15 waves (6/6 cities, score ~15k). Session paused here at user request (usage budget). **Next agent: Phase 4 = GAME-DESIGN.md §6/§7, the dual-viewport interception.** Watch for: sim must keep running during coordinate view; battery placement required before round 1 (currently not enforced — add when battery exists).

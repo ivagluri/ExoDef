@@ -1,5 +1,4 @@
 // Data-driven enemy definitions (GAME-DESIGN.md §5). All numbers [tunable].
-// Phase 2 ships the grunt; bomber/diver/ufo arrive in Phase 3.
 
 export interface EnemyDef {
   id: string;
@@ -10,7 +9,35 @@ export interface EnemyDef {
 
 export const ENEMY_DEFS: Record<string, EnemyDef> = {
   grunt: { id: "grunt", hp: 20, bounty: 8, behavior: "formationDrift" },
-  // bomber: { id: "bomber", hp: 60, bounty: 25, behavior: "seekAndBomb" },   // Phase 3
-  // diver:  { id: "diver",  hp: 15, bounty: 15, behavior: "plunge" },        // Phase 3
-  // ufo:    { id: "ufo",    hp: 80, bounty: 150, behavior: "transit" },      // Phase 3
+  bomber: { id: "bomber", hp: 60, bounty: 25, behavior: "seekAndBomb" },
+  diver: { id: "diver", hp: 15, bounty: 15, behavior: "plunge" },
+  ufo: { id: "ufo", hp: 80, bounty: 150, behavior: "transit" },
 };
+
+// Behavior numbers [tunable]
+export const BOMBER = {
+  spawnY: 120,
+  spawnRadius: 110,
+  speed: 12, // u/s toward hover point
+  hoverAltitude: 30,
+  bombPeriod: 4,
+  bombFallSpeed: 28,
+  bombSplash: 6,
+  cityTargetChance: 0.7,
+} as const;
+
+export const DIVER = {
+  spawnY: 105,
+  cruiseTime: 3,
+  cruiseSpeed: 6,
+  plungeSpeed: 40,
+  blastRadius: 8,
+} as const;
+
+export const UFO = {
+  altitude: 92, // just clippable by flak T3 (reach 95)
+  speed: 25,
+  edgeX: 125,
+  chancePerRound: 0.1, // from round 6 (§9)
+  firstRound: 6,
+} as const;

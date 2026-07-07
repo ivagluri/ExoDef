@@ -5,6 +5,7 @@ import { PlacementInput } from "./input/placement";
 import { IsoCamera } from "./render/cameras";
 import { createWorld } from "./render/scene";
 import { RenderSync } from "./render/sync";
+import { cyclePriority, sellTower, upgradeTower } from "./sim/actions";
 import { simTick, startRound } from "./sim/game";
 import { createGameState } from "./sim/state";
 import { createHud } from "./ui/hud";
@@ -25,6 +26,14 @@ const placement = new PlacementInput(renderer.domElement, iso.camera, world.scen
 const hud = createHud({
   onStart: () => startRound(state),
   onSelect: (id) => placement.select(placement.selection === id ? null : id),
+  onUpgrade: () => placement.selectedTowerId !== null && upgradeTower(state, placement.selectedTowerId),
+  onSell: () => {
+    if (placement.selectedTowerId !== null) {
+      sellTower(state, placement.selectedTowerId);
+      placement.selectedTowerId = null;
+    }
+  },
+  onPriority: () => placement.selectedTowerId !== null && cyclePriority(state, placement.selectedTowerId),
 });
 window.addEventListener("keydown", (ev) => {
   if (ev.code === "Enter") startRound(state);
@@ -54,7 +63,7 @@ function frame(now: number): void {
 
   iso.update(frameDt, orbit.take(frameDt));
   sync.sync(state);
-  hud.update(state, placement.selection);
+  hud.update(state, placement.selection, placement.selectedTowerId);
   renderer.render(world.scene, iso.camera);
 }
 requestAnimationFrame(frame);
