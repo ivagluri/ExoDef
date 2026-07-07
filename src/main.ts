@@ -40,7 +40,15 @@ const hud = createHud({
   },
   onPriority: () => placement.selectedTowerId !== null && cyclePriority(state, placement.selectedTowerId),
   onBanner: () => coordView.enter(state),
+  onSpeed: () => toggleSpeed(),
 });
+
+// 3× fast-forward (playtest QoL 2026-07-07): scales how many fixed-size sim
+// ticks run per frame — never the tick size, so the sim stays deterministic.
+let simSpeed = 1;
+function toggleSpeed(): void {
+  simSpeed = simSpeed === 1 ? 3 : 1;
+}
 // AFTER createHud — the HUD build wipes #hud's children, and the radar canvas
 // lives inside #hud (was created first once; drew to a detached canvas forever)
 const radar = createRadar();
@@ -59,6 +67,7 @@ window.addEventListener("keydown", (ev) => {
     coordView.onCommit(state);
   }
   if (ev.code === "KeyF" && !coordView.isMapMode()) coordView.toggleScheme();
+  if (ev.code === "KeyX") toggleSpeed();
 });
 
 window.addEventListener("resize", () => {
@@ -78,14 +87,17 @@ function frame(now: number): void {
   const frameDt = Math.min((now - last) / 1000, MAX_FRAME);
   last = now;
 
-  accumulator += frameDt;
+  accumulator += frameDt * simSpeed;
   while (accumulator >= SIM_DT) {
     simTick(state, SIM_DT);
     accumulator -= SIM_DT;
   }
 
   const volleyOn = state.volley !== null;
-  if (volleyOn && !volleyWasActive) siren();
+  if (volleyOn && !volleyWasActive) {
+    siren();
+    simSpeed = 1; // missiles are the drama — never let them arrive at 3×
+  }
   volleyWasActive = volleyOn;
 
   // map mode: orbit camera as usual. Coordinate mode: the view owns the
@@ -96,7 +108,7 @@ function frame(now: number): void {
   coordView.update(frameDt, state);
 
   sync.sync(state);
-  hud.update(state, placement.selection, placement.selectedTowerId, coordView.hudInfo(state));
+  hud.update(state, placement.selection, placement.selectedTowerId, coordView.hudInfo(state), simSpeed);
 
   // radar lateral axis: volley frame in coordinate view, else screen-right
   const frameRight = coordView.lateralRight();

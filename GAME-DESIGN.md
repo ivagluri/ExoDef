@@ -395,6 +395,7 @@ HP × `1.06^(wave−50)`, counts +10%/wave, volley every 2–3 waves, warhead ca
 | 1 / 2 / 3 | Select tower type for placement (gun / flak / battery) |
 | ESC | Cancel placement / close panel |
 | ENTER | Start next round |
+| X (or HUD button) | Toggle 3× fast-forward **[tunable]** (2026-07-07 playtest QoL; auto-resets to 1× when a volley launches — the siren moment is never fast-forwarded) |
 
 Gamepad: out of scope v1 (backlog §14).
 

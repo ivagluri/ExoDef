@@ -9,7 +9,7 @@ import { waveDef } from "../sim/waves";
 // toast, tower panel (upgrade/sell/priority), game-over overlay.
 
 export interface Hud {
-  update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo): void;
+  update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo, simSpeed: number): void;
 }
 
 export function createHud(handlers: {
@@ -19,6 +19,7 @@ export function createHud(handlers: {
   onSell: () => void;
   onPriority: () => void;
   onBanner: () => void;
+  onSpeed: () => void;
 }): Hud {
   const hud = document.getElementById("hud")!;
   hud.innerHTML = `
@@ -92,7 +93,10 @@ export function createHud(handlers: {
     </div>
     <div class="bar bottom">
       <div class="build" data-el="build"></div>
-      <button class="start" data-el="start">▶ START ROUND 1</button>
+      <div class="build">
+        <button data-el="speed" title="fast-forward [X]">▶▶ 3×</button>
+        <button class="start" data-el="start">▶ START ROUND 1</button>
+      </div>
     </div>
     <div class="toast" data-el="toast"></div>
     <div class="alert" data-el="alert">
@@ -154,10 +158,14 @@ export function createHud(handlers: {
   press(el("psell"), () => handlers.onSell());
   press(el("ppriority"), () => handlers.onPriority());
   press(el("alertbtn"), () => handlers.onBanner());
+  press(el("speed"), () => handlers.onSpeed());
 
   return {
-    update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo): void {
+    update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo, simSpeed: number): void {
       hud.classList.toggle("coord", coord.active);
+      const speedBtn = el("speed") as HTMLButtonElement;
+      speedBtn.classList.toggle("sel", simSpeed > 1);
+      setText(speedBtn, simSpeed > 1 ? `▶▶ ${simSpeed}× ON` : "▶▶ 3×");
       if (coord.active) {
         // §11.3: ammo pips, auto-pick flight time, inbound count, scheme
         const pips = aliveBatteries(state).map((b, i) => {
