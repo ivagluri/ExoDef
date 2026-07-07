@@ -44,6 +44,10 @@ export function upgradeTower(state: GameState, id: number): void {
 export function sellTower(state: GameState, id: number): void {
   const tower = towerById(state, id);
   if (!tower || state.phase === "gameover") return;
+  if (tower.noSell) {
+    toast(state, "THE CENTRAL BATTERY CANNOT BE SOLD");
+    return;
+  }
   state.cash += sellRefund(tower);
   tower.alive = false;
   toast(state, `SOLD +$${sellRefund(tower)}`);

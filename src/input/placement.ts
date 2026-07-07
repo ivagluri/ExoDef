@@ -47,9 +47,15 @@ export class PlacementInput {
     this.clearGhost();
     if (defId) {
       this.ghost = makeGhost(defId);
-      this.dome = makeRangeDome(TOWER_DEFS[defId].tiers[0].rangeRadius);
-      this.scene.add(this.ghost.object, this.dome);
-      this.ghost.object.visible = this.dome.visible = this.pointerOnGround;
+      this.scene.add(this.ghost.object);
+      // batteries have no auto-fire range — no dome to preview (§6.5)
+      const range = TOWER_DEFS[defId].tiers[0].rangeRadius;
+      if (range > 0) {
+        this.dome = makeRangeDome(range);
+        this.scene.add(this.dome);
+      }
+      this.ghost.object.visible = this.pointerOnGround;
+      if (this.dome) this.dome.visible = this.pointerOnGround;
     }
     this.onSelectionChange(this.selection);
   }
@@ -76,12 +82,13 @@ export class PlacementInput {
       this.pointerOnGround = t > 0;
       if (this.pointerOnGround) this.groundPoint.copy(origin).addScaledVector(direction, t);
     }
-    if (this.ghost && this.dome) {
+    if (this.ghost) {
       const visible = this.pointerOnGround;
-      this.ghost.object.visible = this.dome.visible = visible;
+      this.ghost.object.visible = visible;
+      if (this.dome) this.dome.visible = visible;
       if (visible) {
         this.ghost.object.position.copy(this.groundPoint).setY(0);
-        this.dome.position.copy(this.groundPoint).setY(0);
+        if (this.dome) this.dome.position.copy(this.groundPoint).setY(0);
         this.ghost.setValid(this.isValid());
       }
     }
@@ -119,6 +126,11 @@ export class PlacementInput {
         priority: "first",
         alive: true,
       };
+      if (def.role === "interceptor") {
+        // built mid-volley: joins the fight with a full ammo load (§6.5)
+        const ammo = this.state.volley ? def.tiers[0].interceptor!.ammoPerVolley : 0;
+        tower.battery = { ammo, reloadLeft: 0, inFlight: 0 };
+      }
       this.state.towers.push(tower);
       return;
     }

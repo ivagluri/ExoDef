@@ -1,5 +1,6 @@
 import { BUILDABLE, TOWER_DEFS } from "../content/towers";
 import { sellRefund, towerById, upgradeCost } from "../sim/actions";
+import { inboundCount } from "../sim/missiles";
 import { citiesAlive, type GameState } from "../sim/state";
 import { waveDef } from "../sim/waves";
 
@@ -16,6 +17,7 @@ export function createHud(handlers: {
   onUpgrade: () => void;
   onSell: () => void;
   onPriority: () => void;
+  onBanner: () => void;
 }): Hud {
   const hud = document.getElementById("hud")!;
   hud.innerHTML = `
@@ -49,6 +51,17 @@ export function createHud(handlers: {
         color: #ff5a5a; text-align: center;
       }
       #hud .gameover small { font-size: 14px; color: #d7dce8; letter-spacing: 0.08em; }
+      #hud .alert {
+        position: absolute; bottom: 108px; left: 0; right: 0; display: none;
+        flex-direction: column; align-items: center; gap: 2px;
+        pointer-events: none;
+      }
+      #hud .alert button {
+        border-color: #ff5a5a; color: #ff8a8a; background: #30101adf;
+        font-size: 15px; letter-spacing: 0.12em; animation: alertpulse 1.1s infinite;
+      }
+      #hud .alert small { font-size: 11px; letter-spacing: 0.1em; color: #ff8a8a; opacity: 0.8; }
+      @keyframes alertpulse { 50% { border-color: #ffb0b0; } }
       #hud .tag { position: absolute; left: 12px; bottom: 54px; font-size: 11px; opacity: 0.45; }
       #hud .panel {
         position: absolute; right: 14px; bottom: 60px; display: flex;
@@ -67,6 +80,10 @@ export function createHud(handlers: {
       <button class="start" data-el="start">▶ START ROUND 1</button>
     </div>
     <div class="toast" data-el="toast"></div>
+    <div class="alert" data-el="alert">
+      <button data-el="alertbtn">⚠ MISSILE LAUNCH ⚠</button>
+      <small>[TAB] OR CLICK TO INTERCEPT</small>
+    </div>
     <div class="panel" data-el="panel" style="display:none">
       <div data-el="ptitle" style="letter-spacing:0.1em"></div>
       <button data-el="pupgrade"></button>
@@ -119,6 +136,7 @@ export function createHud(handlers: {
   press(el("pupgrade"), () => handlers.onUpgrade());
   press(el("psell"), () => handlers.onSell());
   press(el("ppriority"), () => handlers.onPriority());
+  press(el("alertbtn"), () => handlers.onBanner());
 
   return {
     update(state: GameState, selection: string | null, selectedTowerId: number | null): void {
@@ -137,17 +155,28 @@ export function createHud(handlers: {
       const toastOpacity = state.messageTtl > 0 ? "1" : "0";
       if (toastEl.style.opacity !== toastOpacity) toastEl.style.opacity = toastOpacity;
 
+      // missile alert banner (§6.2) — shown during a volley, in map view
+      const volleyOn = state.volley !== null;
+      setDisplay(el("alert"), volleyOn ? "flex" : "none");
+      if (volleyOn) {
+        setText(el("alertbtn"), `⚠ MISSILE LAUNCH — ${inboundCount(state)} INBOUND ⚠`);
+      }
+
       // tower panel
       const tower = selectedTowerId !== null ? towerById(state, selectedTowerId) : undefined;
       setDisplay(el("panel"), tower ? "flex" : "none");
       if (tower) {
         const def = TOWER_DEFS[tower.defId];
-        setText(el("ptitle"), `${def.name} T${tower.tier + 1}`);
+        const ammo = tower.battery && volleyOn ? ` · AMMO ${tower.battery.ammo}` : "";
+        setText(el("ptitle"), `${def.name} T${tower.tier + 1}${ammo}`);
         const upBtn = el("pupgrade") as HTMLButtonElement;
         const cost = upgradeCost(tower);
         setText(upBtn, cost === null ? "MAX TIER" : `UPGRADE $${cost}`);
         setDisabled(upBtn, cost === null || state.cash < cost);
+        setDisplay(el("psell"), tower.noSell ? "none" : "");
         setText(el("psell"), `SELL +$${sellRefund(tower)}`);
+        // batteries never auto-target (§6.5) — hide the priority cycler
+        setDisplay(el("ppriority"), tower.defId === "battery" ? "none" : "");
         setText(el("ppriority"), `TARGET: ${tower.priority.toUpperCase()}`);
       }
 

@@ -7,6 +7,8 @@ import { PALETTE } from "../balance";
 export const MODEL_COLORS = {
   gun: 0xf7d23e,
   flak: 0xf78c3e,
+  battery: 0x35e0e8,
+  batteryDormant: 0x1a4a54, // status light before the first siren (§3)
   grunt: 0xe040c8,
   bomber: 0x54e05a,
   diver: 0xff5a5a,
@@ -16,6 +18,9 @@ export const MODEL_COLORS = {
   shell: 0xffd9a0,
   tracer: 0xfff6c0,
   blast: 0xe8fdff,
+  warhead: 0xffffff,
+  warheadTrail: 0xff2b2b, // the Missile Command signature (§12)
+  interceptorTrail: 0xf2f6ff,
   rangeDome: PALETTE.cityCyan,
 } as const;
 
@@ -38,6 +43,23 @@ export function makeTowerModel(defId: string): THREE.Group {
     const gun = new THREE.Mesh(new THREE.ConeGeometry(2.4, 6, 6), lambert(MODEL_COLORS.flak));
     gun.position.y = 6.5;
     group.add(base, gun);
+  } else if (defId === "battery") {
+    // cyan launch platform: low slab + two angled silo tubes + status light.
+    // The light material lives in userData so RenderSync can flip it when the
+    // battery "wakes" at the first siren.
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(9, 2.5, 9), lambert(MODEL_COLORS.battery));
+    slab.position.y = 1.25;
+    const siloA = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.7, 8, 7), lambert(MODEL_COLORS.battery));
+    siloA.position.set(-2, 5.5, 0);
+    siloA.rotation.z = 0.16;
+    const siloB = siloA.clone();
+    siloB.position.x = 2;
+    siloB.rotation.z = -0.16;
+    const lightMat = new THREE.MeshBasicMaterial({ color: MODEL_COLORS.batteryDormant });
+    const light = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), lightMat);
+    light.position.set(0, 3.4, 4.2);
+    group.add(slab, siloA, siloB, light);
+    group.userData.lightMat = lightMat;
   } else {
     // fallback: unmistakable placeholder
     const box = new THREE.Mesh(new THREE.BoxGeometry(6, 8, 6), lambert(0xff00ff));
@@ -81,6 +103,15 @@ export function makeBombModel(): THREE.Mesh {
 
 export function makeShellModel(): THREE.Mesh {
   return new THREE.Mesh(new THREE.SphereGeometry(1, 6, 5), lambert(MODEL_COLORS.shell));
+}
+
+export function makeWarheadModel(): THREE.Mesh {
+  // white point per §12; the red ribbon trail is drawn by RenderSync
+  return new THREE.Mesh(new THREE.SphereGeometry(1.4, 8, 6), new THREE.MeshBasicMaterial({ color: MODEL_COLORS.warhead }));
+}
+
+export function makeInterceptorModel(): THREE.Mesh {
+  return new THREE.Mesh(new THREE.SphereGeometry(0.9, 6, 5), new THREE.MeshBasicMaterial({ color: MODEL_COLORS.warhead }));
 }
 
 export function makeBlastModel(): THREE.Mesh {

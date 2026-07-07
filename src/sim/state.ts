@@ -22,6 +22,10 @@ export interface Tower {
   cooldown: number;
   priority: Priority;
   alive: boolean;
+  /** batteries only: per-volley ammo, reload timer, interceptors in flight (§6.5) */
+  battery?: { ammo: number; reloadLeft: number; inFlight: number };
+  /** the free pre-placed central battery: no cash-out of a free tower */
+  noSell?: boolean;
 }
 
 /** Per-enemy behavior state for individually-moving enemies (bomber/diver/ufo). */
@@ -78,6 +82,49 @@ export interface Effects {
   blasts: { pos: THREE.Vector3; radius: number; ttl: number; maxTtl: number }[];
 }
 
+/** Ballistic warhead on a precomputed quadratic bézier arc (§6.1/§7.3 —
+ *  deterministic, so leading a shot is learnable). */
+export interface Warhead {
+  id: number;
+  pos: THREE.Vector3;
+  p0: THREE.Vector3; // entry (over the horizon, y = ENTRY top)
+  p1: THREE.Vector3; // arc control point
+  p2: THREE.Vector3; // impact point (target position, y = 0)
+  t: number; // 0..1 flight progress
+  duration: number; // seconds for the full arc
+  targetKind: "city" | "tower";
+  targetId: number;
+  alive: boolean;
+}
+
+export interface Interceptor {
+  id: number;
+  pos: THREE.Vector3;
+  target: THREE.Vector3; // the plotted point C, world space
+  speed: number;
+  blastRadius: number;
+  batteryId: number; // frees the silo on arrival
+  alive: boolean;
+}
+
+/** Expanding blast sphere from an interceptor: kills warheads inside its
+ *  radius while active (§7.3). Also rendered directly. */
+export interface InterceptBlast {
+  pos: THREE.Vector3;
+  radius: number;
+  ttl: number;
+  maxTtl: number;
+}
+
+/** One missile volley (§6). Lives from launch alert until the last warhead
+ *  is dead or landed; ammo refills when it ends. */
+export interface Volley {
+  heading: THREE.Vector3; // volley direction, XZ unit vector — defines the frame (§7.1)
+  pending: { at: number }[]; // staggered launch times (roundTime); targets resolve at launch
+  total: number;
+  counterforce: boolean;
+}
+
 export interface PendingSpawn {
   at: number; // roundTime seconds
   enemy: string;
@@ -99,6 +146,11 @@ export interface GameState {
   groups: GruntGroup[];
   shells: Shell[];
   bombs: Bomb[];
+  volley: Volley | null;
+  warheads: Warhead[];
+  interceptors: Interceptor[];
+  interceptBlasts: InterceptBlast[];
+  batteryAwake: boolean; // the central battery "wakes" at the first siren (§3)
   effects: Effects;
   nextId: number;
   message: string;
@@ -121,13 +173,30 @@ export function createGameState(): GameState {
       pos: new THREE.Vector3(x, 0, z),
       hp: CITY_HP,
     })),
-    towers: [],
+    // The free T1 battery, pre-placed at map center — dormant until the first
+    // volley, unsellable (§2/§3, 2026-07-07 review).
+    towers: [{
+      id: 1,
+      defId: "battery",
+      tier: 0,
+      pos: new THREE.Vector3(0, 0, 0),
+      cooldown: 0,
+      priority: "first",
+      alive: true,
+      battery: { ammo: 0, reloadLeft: 0, inFlight: 0 },
+      noSell: true,
+    }],
     enemies: [],
     groups: [],
     shells: [],
     bombs: [],
+    volley: null,
+    warheads: [],
+    interceptors: [],
+    interceptBlasts: [],
+    batteryAwake: false,
     effects: { tracers: [], blasts: [] },
-    nextId: 1,
+    nextId: 2,
     message: "",
     messageTtl: 0,
     citiesDirty: false,

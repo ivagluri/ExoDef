@@ -92,3 +92,21 @@ export const GRUNT = {
 export const CITY_HP = 2; // bomb/landing = 1 hit, warhead = 2 (§8)
 export const CITY_RADIUS = 8; // for hit tests
 
+// GAME-DESIGN.md §6 — missile volleys & interception [tunable]
+export const VOLLEY = {
+  entryY: 160, // warheads become visible at ENTRY top
+  entryBackDist: 260, // launch point distance behind target along the heading
+  entryLateralJitter: 18, // per-warhead sideways spread within the volley
+  arcPeakY: 105, // bézier control-point altitude (shallow over-horizon arc)
+  flightTime: 30, // seconds overhead at wave 5
+  flightTimeDropPerWave: 0.35, // modest speed-up with wave (§9)
+  flightTimeMin: 18,
+  staggerMin: 1.5, // seconds between launches
+  staggerMax: 3,
+  firstLaunchDelay: 2, // after round start; ~8s grace is emergent (they enter high)
+  warheadSplash: 12, // ground splash radius vs towers (§8)
+  interceptBounty: 30,
+  blastTtl: 1.5, // interceptor blast sphere active window
+  proximityInhibitY: 15, // no aiming below this (§6.5)
+} as const;
+

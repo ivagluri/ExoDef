@@ -9,6 +9,7 @@ import { cyclePriority, sellTower, upgradeTower } from "./sim/actions";
 import { simTick, startRound } from "./sim/game";
 import { createGameState } from "./sim/state";
 import { createHud } from "./ui/hud";
+import { siren } from "./ui/siren";
 
 const app = document.getElementById("app")!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -34,7 +35,11 @@ const hud = createHud({
     }
   },
   onPriority: () => placement.selectedTowerId !== null && cyclePriority(state, placement.selectedTowerId),
+  onBanner: () => {}, // coordinate view entry lands in Phase 4b
 });
+
+// siren on volley start (§6.2) — watch for the sim-side transition
+let volleyWasActive = false;
 window.addEventListener("keydown", (ev) => {
   if (ev.code === "Enter") startRound(state);
 });
@@ -60,6 +65,10 @@ function frame(now: number): void {
     simTick(state, SIM_DT);
     accumulator -= SIM_DT;
   }
+
+  const volleyOn = state.volley !== null;
+  if (volleyOn && !volleyWasActive) siren();
+  volleyWasActive = volleyOn;
 
   iso.update(frameDt, orbit.take(frameDt));
   sync.sync(state);

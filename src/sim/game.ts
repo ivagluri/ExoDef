@@ -1,6 +1,7 @@
 import { CITY_HP, ECONOMY, SCORE } from "../balance";
 import { UFO } from "../content/enemies";
 import { spawnGruntGroup, updateGroups } from "./enemies";
+import { launchVolley, updateInterceptors, updateWarheads } from "./missiles";
 import { spawnBomber, spawnDiver, spawnUfo, updateBombs, updateRaiders } from "./raiders";
 import { rand } from "./rng";
 import { citiesAlive, toast, type GameState } from "./state";
@@ -26,9 +27,10 @@ export function startRound(state: GameState): boolean {
     state.pending.sort((a, b) => a.at - b.at);
   }
 
-  // Phase 4 will launch real volleys here; until then the warning is a stub
-  if (waveDef(state.round)?.missiles) {
-    toast(state, "⚠ MISSILE LAUNCH DETECTED — INTERCEPTION SYSTEMS OFFLINE (PHASE 4) ⚠", 6);
+  // Missile volley rounds (§6): launch alert fires with the round itself
+  const missiles = waveDef(state.round)?.missiles;
+  if (missiles) {
+    launchVolley(state, missiles.warheads, missiles.counterforce ?? false);
   }
   state.phase = "combat";
   return true;
@@ -46,6 +48,7 @@ function spawnPending(state: GameState): void {
 
 function checkRoundClear(state: GameState): void {
   if (state.pending.length > 0 || state.enemies.length > 0 || state.bombs.length > 0) return;
+  if (state.volley !== null) return; // volley still inbound (§6: round continues)
   state.phase = "build";
   const income = citiesAlive(state) * ECONOMY.cityIncome;
   state.cash += income;
@@ -75,6 +78,9 @@ export function simTick(state: GameState, dt: number): void {
   state.tick++;
   if (state.messageTtl > 0) state.messageTtl -= dt;
   ageEffects(state, dt);
+  // interceptors/blasts resolve even between rounds (a shot fired at the last
+  // warhead keeps flying through the round-clear moment)
+  updateInterceptors(state, dt);
   if (state.phase !== "combat") return;
 
   state.roundTime += dt;
@@ -82,6 +88,7 @@ export function simTick(state: GameState, dt: number): void {
   updateGroups(state, dt);
   updateRaiders(state, dt);
   updateBombs(state, dt);
+  updateWarheads(state, dt);
   updateTowers(state, dt);
   updateShells(state, dt);
   checkRoundClear(state);

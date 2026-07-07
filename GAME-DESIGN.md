@@ -501,6 +501,7 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 - Gamepad support (twin-stick aiming maps beautifully to the two-viewport scheme)
 - Campaign / multiple maps, meta-progression
 - Real name (SKYFALL is a placeholder)
+- **Orbital-platform reframe + bypass lives** (2026-07-07, user): the battlefield is an orbital platform — the "cities" are support pillars / energy cores. Losing all of them isn't instant death: a Bloons-TD-style lives pool where only a certain number of enemies can bypass before it's over. Changes the loss condition (§3/§8); needs its own design pass.
 
 **Weapon ideas from the 2026-07-07 playtest (backlog; curate 2–3 winners after Phase 4 ships — notes preserved verbatim):**
 - **Frag bomb** — (no further notes yet)
