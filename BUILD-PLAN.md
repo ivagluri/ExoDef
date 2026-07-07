@@ -7,13 +7,21 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 
 1. Work ONE phase at a time, in order. Do not start a phase until the previous is checked off.
 2. When a phase is done: verify its Definition of Done, check its boxes, update the **Status** line and **Session log**, commit.
-3. All balance numbers live in `src/balance.ts` and come from GAME-DESIGN.md §4/§5/§8/§9. Don't scatter constants.
+3. Core balance/scaling numbers live in `src/balance.ts`; tower/enemy per-unit definitions live in `src/content/`. Keep new tunables centralized in those files, not scattered through systems.
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 6 COMPLETE — roster expansion + core repair implemented; user playtest next** (updated 2026-07-07)
+**Status: Phase 6 COMPLETE — live playtest looks good; capture feedback before choosing the next phase** (updated 2026-07-07)
 
-> **Resume here (fresh context):** read GAME-DESIGN.md first. Waves 16–50/freeplay/victory, bonus cores, mothership boss stages, WebAudio cues, settings, local high score, upgrade preview, art/readability pass, core/platform terminology, plotted-only interception, Phase 6 tower expansion, and paid damaged-core repair are implemented. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is titled **EXODEF**. Balance tuning is deliberately deferred until the expanded roster settles.
+> **Resume here (fresh context):** read `GAME-DESIGN.md` first, then this section. The current build is pushed through commit `9912d35` on `main`: complete wave-50/freeplay arc, boss stages, audio/settings/high score, readability pass, core/platform terminology, plotted-only missile interception, six-tower roster, and paid damaged-core repair. The latest live feedback says playtest is looking good after Phase 6 fixes. Do not assume a Phase 7 exists yet; first gather any remaining playtest notes and ask/plan before starting a new feature or balance phase.
+
+### Next Agent Checklist
+
+- Start from clean `main`; expected latest commit is `9912d35 Fix Phase 6 playtest feedback` unless the user has made newer changes.
+- Use `npm run dev` for browser playtest, `npm run build` after TypeScript/render changes, and `npm run smoke` after sim/gameplay changes. `npm run smoke` may need elevated execution because `tsx` opens an IPC pipe.
+- Keep enemy warheads purely player-fought; AA Missile towers must never target warheads.
+- Keep “core” language everywhere. These are energy cores on an orbital defence platform, not cities.
+- Balance tuning is backlog until the user explicitly wants it; the roster was intentionally stabilized first.
 
 ---
 
@@ -103,11 +111,20 @@ Roster stabilization before serious balance tuning. Adds low-risk tower concepts
 
 **DoD:** new towers are buildable/upgradable, repair works during combat, enemy warhead interception remains purely player-plotted, and `npm run build` + `npm run smoke` pass. User browser playtest decides follow-up fixes.
 
+**Live playtest status:** looking good after AA Missile Strongest default, drone separation, and missile-orientation fixes. No blocking Phase 6 issue is currently recorded.
+
 ---
 
 ## Known issues
 
-- ~~**HUD buttons unresponsive** (user playtest 2026-07-07)~~ **FIXED 2026-07-07** with Phase 4: HUD buttons now fire on `pointerdown` (canvas parity, drag-during-press can't cancel) and `hud.update()` only mutates the DOM when values actually change. Confirm in next browser playtest.
+- No current blocking issues recorded.
+
+## Recently Fixed
+
+- ~~**HUD buttons unresponsive** (user playtest 2026-07-07)~~ **FIXED 2026-07-07** with Phase 4: HUD buttons now fire on `pointerdown` and `hud.update()` only mutates the DOM when values actually change.
+- ~~**AA Missile felt weak by default**~~ **FIXED 2026-07-07**: new AA Missile towers default to Strongest targeting while remaining toggleable.
+- ~~**Drones visually stack**~~ **FIXED 2026-07-07**: simple drone separation keeps capped drones from sitting inside each other.
+- ~~**AA missile model tumbles**~~ **FIXED 2026-07-07**: missile models orient nose-first toward their live target.
 
 ## Backlog notes
 
@@ -115,17 +132,20 @@ Roster stabilization before serious balance tuning. Adds low-risk tower concepts
 - Stronger-enemy volume too low as stages progress; decide later between composition, enemy strength, and economy levers.
 - Battery upgrade direction: bigger blast radius vs. fan-shot/persistent blast/cluster warhead; defer until roster playtest.
 - Radar tower is not active scope because the persistent HUD radar satisfies the readability need.
+- Possible future phases: balance pass, enemy/warhead variety, additional weapons from §14, or UX/readability cleanup. Pick one only after user direction.
 
 ## Session log
+
+Historical notes below are preserved for context. Any old "resume here" text inside this log has been superseded by the top-level Resume section.
 
 - **2026-07-07** — Design doc completed and approved. Build plan created. Phase 1 started.
 - **2026-07-07** — Phase 1 complete: scaffold, world render, orbit camera, sim loop. `npm run build` clean, dev server verified. Note: Node.js was installed via Homebrew this session (machine had none). Files: `src/{main,balance}.ts`, `src/render/{scene,cameras}.ts`, `src/input/orbit.ts`, `src/sim/state.ts`, `src/ui/hud.ts`. Await user playtest of the diorama before/while starting Phase 2.
 - **2026-07-07** — Phase 2 complete: sim entities + game orchestration (`src/sim/{game,waves,enemies,towers}.ts`), placement input, render sync, full HUD. Headless smoke test added (`npm run smoke`, uses tsx) — run it after sim changes. **User playtest feedback applied:** grunt movement felt rigid (axis-locked Space Invaders march) → replaced with organic meander (wandering heading + continuous swelling sink + per-member bob); GAME-DESIGN.md §5 updated to match. Also: grunts fast-dive from ENTRY to y=100 before meandering (pacing — literal spec meant minutes of dead time).
-- **2026-07-07 (later)** — Phase 4 NOT started: an agent was launched for it but stopped almost immediately (user's usage budget ran out mid-session). No Phase 4 code exists. User playtested Phase 3: "looks surprisingly good"; one item backburnered to Phase 5 (upgrade preview in tower panel, see Phase 5 list). **Resume here: implement Phase 4 per the checklist above and GAME-DESIGN.md §6/§7.**
-- **2026-07-07** — Phase 3 complete: bomber/diver/UFO (`src/sim/raiders.ts` + bombs), upgrade/sell/priority via tower panel (`src/sim/actions.ts`), waves 1–15 (volleys stubbed as warnings), bonus core at wave 10, shared RNG (`src/sim/rng.ts`). **Second playtest feedback applied:** gun rebalanced to long-range/weak (range 80/alt 90, 8 dps T1) vs flak short-range/heavy — user found original gun range left ~1 min dead time; GAME-DESIGN.md §4 updated. Smoke test is now an auto-player that clears all 15 waves (6/6 cores, score ~15k). Session paused here at user request (usage budget). **Next agent: Phase 4 = GAME-DESIGN.md §6/§7, the dual-viewport interception.** Watch for: sim must keep running during coordinate view; battery placement required before round 1 (currently not enforced — add when battery exists). *(Superseded 2026-07-07 review: battery is now pre-placed, no placement gate.)*
+- **2026-07-07 (later, historical)** — Phase 4 had not started at that moment; an agent was launched but stopped almost immediately when usage budget ran out. User playtested Phase 3: "looks surprisingly good"; upgrade preview was backburnered to Phase 5. This note is preserved only as history; Phase 4 is now complete.
+- **2026-07-07 (historical)** — Phase 3 complete: bomber/diver/UFO (`src/sim/raiders.ts` + bombs), upgrade/sell/priority via tower panel (`src/sim/actions.ts`), waves 1–15 (volleys stubbed as warnings), bonus core at wave 10, shared RNG (`src/sim/rng.ts`). **Second playtest feedback applied:** gun rebalanced to long-range/weak (range 80/alt 90, 8 dps T1) vs flak short-range/heavy — user found original gun range left ~1 min dead time; GAME-DESIGN.md §4 updated. Smoke test was an auto-player that cleared all 15 waves (6/6 cores, score ~15k). Battery placement notes from this point were superseded by the pre-placed central battery.
 - **2026-07-07** — Playtest-notes review (`playtestnotes.md`) via design interview before Phase 4. Decisions: 9 weapon ideas → §14 backlog (curate 2–3 after Phase 4); persistent radar overlay added to Phase 4 scope (new §11.4 — answers §15 Q3); free battery now **pre-placed at map center**, dormant + unsellable (user idea mid-review); early-start bonus cut; battery "spread" = blast radius (already in tiers), direction question logged as §15 Q7; spawn-spread → Phase 5; economy + stronger-enemy-volume tuning → Phase 6. Both docs amended.
 - **2026-07-07** — Phase 4 complete: missile sim (`src/sim/missiles.ts` — volleys, bézier warheads, batteries, interceptors, blast kill check), coordinate view (`src/render/coordview.ts` — dual ortho viewports, volley frame, 0.6s swing, plotted side+top click aiming), radar overlay (`src/ui/radar.ts`), siren stub (`src/ui/siren.ts`), alert banner + coord HUD strip in `hud.ts`. Central battery pre-placed with wake light. Smoke auto-player now leads shots along warhead arcs: waves 1–15 clear 6/6 cores, all 12 warheads intercepted, counterforce at 15 included. `npm run build` clean.
-- **2026-07-07 (playtest + wrap)** — User playtested Phase 4 live; all findings fixed in-session: **radar invisible** (canvas was created before `createHud()`'s innerHTML rebuild → drew to a detached element; also brightened band grid + window-scaled panel/labels 1×–1.6×); **top view empty for half of each volley** (entry moved from 260u-behind-target to fixed depth just past the platform edge, top viewport made asymmetric — V_BACK 165 / V_FRONT 115, §6.1 updated). Added **3× fast-forward** ([X]/HUD button; auto-resets to 1× at volley launch — keeps the siren moment honest). **Retitled EXODEF** with an EXODEF COMMAND playfield mark (arcade-style, HUD tag). Backlog grew: orbital-platform reframe + Bloons-style bypass lives, converging multi-heading volleys, branding (resolved). **Next agent: Phase 5** — waves 16–50 formula + spawn-spread, mothership boss (replaces wave 15's current composition), wave-50 finale + victory, audio pass (real siren), art pass, settings panel (absorb the [X] toggle), upgrade preview. Watch: boss at 15/30/45 escalation.
+- **2026-07-07 (playtest + wrap)** — User playtested Phase 4 live; all findings fixed in-session: **radar invisible** (canvas was created before `createHud()`'s innerHTML rebuild → drew to a detached element; also brightened band grid + window-scaled panel/labels 1×–1.6×); **top view empty for half of each volley** (entry moved from 260u-behind-target to fixed depth just past the platform edge, top viewport made asymmetric — V_BACK 165 / V_FRONT 115, §6.1 updated). Added **3× fast-forward** ([X]/HUD button; auto-resets to 1× at volley launch — keeps the siren moment honest). **Retitled EXODEF** with an EXODEF COMMAND playfield mark (arcade-style, HUD tag). Backlog grew: orbital-platform reframe + Bloons-style bypass lives, converging multi-heading volleys, branding (resolved). Phase 5 work was planned from this point and is now complete.
 - **2026-07-07 (Phase 5 chunk 1)** — Implemented deterministic formula waves 16–50 plus freeplay generation, scaling HP/speed spawn metadata, generated missile scheduling, wave-50 victory/freeplay overlay, and wave-50 survivor score bonus. Extended smoke auto-player to spend late-game cash on more towers and backup batteries. Not done yet: mothership bosses, authored boss+max-volley finale, audio/art/settings/upgrade-preview work. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cores.
 - **2026-07-07 (Phase 5 chunk 2)** — Implemented mothership boss as a normal targetable enemy (`mothership` def + flat-shaded model + radar dot): large hull targeting, slow descent/roam, grunt/diver emissions from underside, low-altitude bomb drops, and escalating HP for waves 15/30/45/50. Wave 15 now replaces the old normal composition with boss + counterforce volley; wave 50 is boss + max volley. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cores.
 - **2026-07-07 (Phase 5 chunk 3)** — Implemented WebAudio pass and settings panel. Siren is a harsh stacked sawtooth/bandpass wail per user direction; repeated cues use lower-gain sine/square synths (gun, flak, interceptor launch, blasts, core hit/death, round clear, UFO warble). Settings panel now controls current game speed and volume; volume persists in localStorage. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cores.

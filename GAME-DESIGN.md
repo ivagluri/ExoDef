@@ -4,7 +4,9 @@
 
 A 3D tower defense on a single rotating orbital defence platform. Alien waves descend from space toward your energy cores; your towers auto-fire upward. Periodically, enemy missile volleys arc in from over the horizon and the player swings into a dual-viewport "coordinate view" to plot interceptor shots in full 3D — while the ground war keeps running.
 
-This document is the buildable spec. It encodes every decision from the design interview (2026-07-07). Numbers marked **[tunable]** are starting values expected to change in playtesting; everything else is a locked design decision. Builder agents should implement from this doc without re-deriving choices.
+This document is the buildable spec. It encodes every decision from the design interview and live playtest passes on 2026-07-07. Numbers marked **[tunable]** are starting values expected to change in playtesting; everything else is a locked design decision. Builder agents should implement from this doc without re-deriving choices.
+
+**Current implementation snapshot:** EXODEF is playable through wave 50 and freeplay with six tower types, mothership boss waves, plotted missile interception, persistent radar, WebAudio cues, local high score, paid damaged-core repair, and Phase 6 playtest fixes. Balance tuning is intentionally deferred until the user chooses that as a next phase.
 
 ---
 
@@ -50,8 +52,8 @@ Positions are (x, z). The center is deliberately open: the free starting battery
 
 | Band    | Altitude (y) | What lives here |
 |---------|--------------|-----------------|
-| ENTRY   | 120–160      | Spawn zone. Missile trails become visible here (siren). Nothing can shoot this high except nothing — radar (expansion) *sees* here. |
-| HIGH    | 80–120       | UFO cruises at ~100. Beam tower (expansion) reaches here. Missile arcs pass through. |
+| ENTRY   | 120–160      | Spawn zone. Missile trails become visible here (siren). AA Missile, Repulsor upgrades, and radar visibility can reach into this band. |
+| HIGH    | 80–120       | UFO cruises at ~100. Flak upgrades, AA Missile, drones, and Repulsor all interact here. Missile arcs pass through. |
 | MID     | 40–80        | Flak's domain. Grunt waves spend most of their descent here. |
 | LOW     | 10–40        | Gun turret's domain. Bombers do their bombing runs at ~30. Last chance before landing. |
 | LANDING | 0–10         | Grunts that reach 0 detonate on the ground. Interceptor blasts below y=15 are proximity-inhibited (see §6). |
@@ -163,7 +165,7 @@ Cores have **2 HP**. Bomb hit = 1, grunt landing = 1, missile warhead = 2 (insta
 | **Grunt** ▼ | 20 | $8 | Wave filler. Spawns in loose groups of 5–9 at ENTRY. The group dives quickly to the formation band (~y=100), then **meanders organically**: anchor wanders on a serpentine heading (steering back when it strays off-map) while sinking continuously with a gentle swell; each member bobs on its own phase. *(Changed from axis-locked drift + discrete step-downs after 2026-07-07 playtest — the literal Space Invaders march read as rigid in 3D.)* On reaching y=0: detonates, destroying towers within 8 u and dealing 1 hit to a core within 8 u. |
 | **Bomber** ◆ | 60 | $25 | Picks a target (core 70% / tower 30%), flies to hover ~30 u above it, drops a bomb every 4s (bomb falls straight down, 1 hit to whatever's beneath, 6 u splash vs towers). Re-targets after destroying its target. The priority kill. |
 | **Diver** ↓ | 15 | $15 | Spawns at HIGH, cruises 3s, then plunges at 40 u/s straight at a random structure. Impact = same as grunt landing. Tests low-altitude reaction coverage. |
-| **Bonus UFO** ◑ | 80 | $150 | Rare (see wave table). Crosses the map at y≈100 (HIGH) at 25 u/s, on screen ~8–10s, harms nothing. Cash piñata — in v1 only T3 flak clips it; it mainly advertises the beam tower expansion. |
+| **Bonus UFO** ◑ | 80 | $150 | Rare (see wave table). Crosses the map at y≈100 (HIGH) at 25 u/s, on screen ~8–10s, harms nothing. Cash piñata and high-altitude coverage check for flak upgrades, AA Missile, drones, and Repulsor. |
 | **Mothership (boss)** ⬢ | ~1500 [tunable] | $500 | **Boss stages** (added 2026-07-07, user idea): waves 15/30/45 are boss waves. One mega enemy — a huge slow hulk that descends gradually while **periodically emitting small enemies** (grunt clusters, occasional divers) from its underside. Long fight but not a bullet sponge: big hull = every tower connects, so time-to-kill stays reasonable [tunable in playtest]. Killing it ends the emission stream; if it reaches low altitude it becomes a slow roaming disaster (heavy bomb drops) rather than instantly detonating. Escalates per appearance (HP, emission rate). Wave 50 finale = mothership + max volley simultaneously. |
 
 Grunt descent speed and group HP scale with wave number (§9). All numbers **[tunable]**.
@@ -472,7 +474,7 @@ ALT                       axes: X = lateral position relative to the
 | Ground | Single flat pale sand-gray plane; thin darker grid lines acceptable if readability wants them |
 | Sky | Near-black navy, hard horizon line, sparse white star points |
 | Cores | White/cyan energy-core clusters (3–6 blocks each); damaged = half the blocks gone plus red flicker |
-| Towers | Bright primaries: gun = yellow, flak = orange, battery = cyan; ≤ 150 triangles each |
+| Towers | Bright primaries/simple silhouettes: gun = yellow, flak = orange, battery = cyan, repulsor = pale blue, AA missile = red/orange, drone = green/cyan; keep models low-poly and readable |
 | Enemies | Grunt = magenta octahedron-ish; bomber = green wedge; diver = red dart; UFO = classic silver disc |
 | Warheads / trails | White point + solid red ribbon trail (the Missile Command signature); interceptor trails white |
 | Blasts | Expanding flat-shaded icosphere, white→cyan, no particles needed |
@@ -497,18 +499,18 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 ```
 
 - **Fixed-timestep simulation** (60 Hz accumulator) decoupled from render — the sim must be identical whether the player is in map or coordinate view (pillar 1 depends on it).
-- Architecture: plain entity lists (`towers[]`, `enemies[]`, `projectiles[]`, `warheads[]`, `blasts[]`) updated by systems; **all content from data defs** (§4, §5 schemas) in `src/content/*.ts`; all balance numbers in one `balance.ts`.
+- Architecture: plain entity lists (`towers[]`, `enemies[]`, `shells[]`, `aaMissiles[]`, `drones[]`, `warheads[]`, `interceptors[]`, `blasts[]`) updated by systems; **all content from data defs** (§4, §5 schemas) in `src/content/*.ts`; shared balance/scaling numbers live in `src/balance.ts`.
 - **Object pooling** for projectiles/trail segments (guns fire 4/s × N towers). Trails: `THREE.Line` ring buffers.
 - HUD: plain HTML/CSS overlay (no UI framework needed at this scope).
 - Suggested layout: `src/{main,sim,render,input,ui,content}/`, `GAME-DESIGN.md` at repo root.
 
 ---
 
-## 14. v1 scope cut-line & expansion backlog
+## 14. Current cut-line & expansion backlog
 
 **Current playable includes:** the one map, 6 towers with tiers, 4 enemies plus mothership, missile volleys with plotted side+top click interception, dual-view interception, waves 1–15 authored + formula to 50 + freeplay, full damage/economy model, Spectre art pass, audio cues, local high score, and paid damaged-core repair.
 
-**Backlog (explicitly NOT v1):**
+**Backlog (explicitly not current active scope):**
 - Radar tower is not active scope; the persistent HUD radar already solves the v1 readability problem. Any future radar tower would need a distinct support role.
 - High-alt sniper tower remains a possible future concept, but "Beam" now means the Repulsor Beam control tower.
 - More enemies: shielded tank, splitter (mothership/boss stages were promoted into core v1 — see §5/§9)
@@ -532,12 +534,13 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 
 ---
 
-## 15. Open questions → answer via playtest
+## 15. Remaining playtest questions / next-phase candidates
 
 1. ~~**Default fire scheme:** A (plotted shot) vs B (plot + commit).~~ **Answered 2026-07-07:** plotted side+top click stays; plot+commit/SPACE was too slow for live gameplay and has been removed.
 2. **Volley density & pace:** warhead count curve, 30s flight time, 8s grace — tune until volleys are tense but plottable.
 3. ~~**The peek problem:** is TAB-peeking at the map mid-volley enough, or does the coordinate view need the thin map-status strip upgraded to a mini radar?~~ **Answered 2026-07-07:** yes — and further: the radar is a persistent overlay in *both* views (§11.4), because altitude is hard to read at the fixed pitch at all times, not just during volleys.
-4. **Difficulty numbers:** everything marked [tunable], especially economy pacing around wave 5 (first volley must be survivable with the free battery alone). 2026-07-07 playtest inputs remain: economy too generous overall; stronger-enemy volume too low as stages progress. Full balance is deferred until the expanded tower roster stabilizes.
-5. **Shared-axis clicks:** does "last click wins u" ever feel like fighting the controls? If so, consider per-view u memory.
-6. **Camera orbit:** does anyone actually rotate? If not, that's fine (it's a toy) — but check it never *hurts* readability.
-7. **Battery upgrade direction** (2026-07-07): bigger blast radius (current tiers, the Missile Command "spread" feel) vs. fan-shot/persistent blast/cluster-warhead ideas. User undecided — defer until the expanded roster has been playtested.
+4. **Roster feel:** Phase 6 live playtest is positive so far after AA Missile Strongest default, drone separation, and missile-orientation fixes. Continue collecting notes on Repulsor usefulness, AA Missile value, drone readability, and repair cost before changing balance.
+5. **Difficulty numbers:** everything marked [tunable], especially economy pacing around wave 5 (first volley must be survivable with the free battery alone). 2026-07-07 playtest inputs remain: economy too generous overall; stronger-enemy volume too low as stages progress. Full balance is deferred until the user explicitly chooses a balance phase.
+6. **Shared-axis clicks:** does "last click wins u" ever feel like fighting the controls? If so, consider per-view u memory.
+7. **Camera orbit:** does anyone actually rotate? If not, that's fine (it's a toy) — but check it never *hurts* readability.
+8. **Battery upgrade direction** (2026-07-07): bigger blast radius (current tiers, the Missile Command "spread" feel) vs. fan-shot/persistent blast/cluster-warhead ideas. User undecided — defer until the expanded roster has been playtested.
