@@ -1,6 +1,6 @@
 # EXODEF — Build Plan
 
-*(Retitled from SKYFALL 2026-07-07; the repo directory is still `skyfall/`.)*
+*(Retitled from SKYFALL 2026-07-07.)*
 
 Companion to `GAME-DESIGN.md` (the spec — read it first; section references below are to it).
 This file is the **phase tracker**. Rules for any agent working on this project:
@@ -13,7 +13,7 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 
 **Status: Phase 4 COMPLETE and user-playtested (fixes applied same session) — Phase 5 (full arc & polish) is next** (updated 2026-07-07)
 
-> **Resume here (fresh context):** read GAME-DESIGN.md first (§9 waves 16–50 formula, §5 mothership, §12 audio/art) then implement Phase 5 per its checklist below. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is now titled **EXODEF** (dir still `skyfall/`). Still open from §15: default fire scheme (Q1) and all Phase 6 tuning items.
+> **Resume here (fresh context):** read GAME-DESIGN.md first (§9 waves 16–50 formula, §5 mothership, §12 audio/art) then implement Phase 5 per its checklist below. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is now titled **EXODEF**. Still open from §15: default fire scheme (Q1) and all Phase 6 tuning items.
 
 ---
 

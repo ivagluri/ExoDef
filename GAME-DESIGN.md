@@ -1,4 +1,4 @@
-# EXODEF (formerly SKYFALL — retitled 2026-07-07; repo directory still `skyfall/`)
+# EXODEF (formerly SKYFALL — retitled 2026-07-07)
 
 **Missile Command × Space Invaders × Tower Defense**
 
