@@ -9,7 +9,7 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 3 COMPLETE — Phase 4 (missile interception, the signature mechanic) is next** (updated 2026-07-07)
+**Status: Phase 4 COMPLETE (pending user browser playtest) — Phase 5 (full arc & polish) is next** (updated 2026-07-07)
 
 ---
 
@@ -54,23 +54,23 @@ Waves 1–15 minus missiles; upgrades; win/lose framing.
 
 **DoD:** waves 1–15 playable end-to-end (missiles stubbed); losing and winning states work.
 
-## Phase 4 — Missile volleys & interception (the signature)
+## Phase 4 — Missile volleys & interception (the signature) ✅ (2026-07-07)
 
 Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additions (radar §11.4, pre-placed battery, bonus removal).
 
-- [ ] Remove early-start bonus (playtest: unnecessary) — `balance.ts`, `game.ts`, docs
-- [ ] Fix HUD button responsiveness (see Known issues below)
-- [ ] Missile battery tower: free T1 **pre-placed at map center** (dormant until first siren, unsellable), additional at $600, tiers, ammo/reload/silos
-- [ ] Warheads: over-horizon bézier arcs, per-volley heading, staggered launches, city + counterforce targeting
-- [ ] Alert flow: siren stub, banner, grace period, round-preview ⚠ warnings
-- [ ] Coordinate view: dual ortho viewports (side 70% / top 30%, lateral axes aligned), volley frame math (§7.1), 0.6s camera transition, TAB free toggle, auto-return
-- [ ] Aiming: shared 3D crosshair + ghost mirror, Scheme A (plotted shot) + Scheme B (plot+commit), settings toggle, proximity inhibit y≥15
-- [ ] Auto-pick battery with preview line + flight time (§7.2); interceptor flight; expanding blast spheres; warhead kill check (§7.3)
-- [ ] Warhead impacts (city killed outright, tower + splash); intercept bounty
-- [ ] Persistent radar overlay (§11.4): corner canvas in both views, camera-relative lateral × altitude, warheads loudest / grunts faint
-- [ ] Sim continues during coordinate view (verify explicitly)
+- [x] Remove early-start bonus (playtest: unnecessary) — `balance.ts`, `game.ts`, docs
+- [x] Fix HUD button responsiveness (pointerdown firing + change-guarded DOM writes)
+- [x] Missile battery tower: free T1 **pre-placed at map center** (dormant until first siren, unsellable), additional at $600, tiers, ammo/reload/silos — `src/sim/missiles.ts`, `src/content/towers.ts`
+- [x] Warheads: over-horizon bézier arcs, per-volley heading, staggered launches, city + counterforce targeting
+- [x] Alert flow: siren stub (`src/ui/siren.ts`), banner, grace (emergent from 30s arcs), round-preview ⚠ warnings
+- [x] Coordinate view: dual ortho viewports (side 70% / top 30%, lateral axes aligned), volley frame math (§7.1), 0.6s camera transition, TAB free toggle, auto-return — `src/render/coordview.ts`
+- [x] Aiming: shared 3D crosshair (one object serves both viewports as its own ghost), Scheme A + Scheme B, [F] toggle persisted to localStorage (settings panel is Phase 5), proximity inhibit y≥15
+- [x] Auto-pick battery with preview line + flight time (§7.2); interceptor flight; expanding blast spheres; warhead kill check (§7.3)
+- [x] Warhead impacts (city killed outright, tower + 12u splash); intercept bounty $30
+- [x] Persistent radar overlay (§11.4): corner canvas in both views, camera-relative lateral × altitude — `src/ui/radar.ts`
+- [x] Sim continues during coordinate view — by construction: `main.ts` runs `simTick` before any view logic; the coordinate view touches only camera/render/input. Confirm the feel in browser playtest.
 
-**DoD:** waves 1–15 fully playable including real volleys at 5/9/12/15; counterforce at 15 threatens batteries; both input schemes work.
+**DoD:** waves 1–15 fully playable including real volleys at 5/9/12/15; counterforce at 15 threatens batteries; both input schemes work. *(Sim-level DoD verified headless: auto-player leads + intercepts all 12 warheads, 6/6 cities. Browser playtest of the view swing, aiming feel, and both schemes = user's next session.)*
 
 ## Phase 5 — Full arc & polish
 
@@ -97,9 +97,9 @@ Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
 
 ---
 
-## Known issues (fix in next session before/with Phase 4)
+## Known issues
 
-- **HUD buttons unresponsive** (user playtest 2026-07-07): clicking START ROUND / upgrade panel buttons often takes multiple attempts. Suspects to check, in order: (1) `hud.update()` runs every animation frame and rewrites button `textContent`/`disabled` — a mid-click DOM mutation or a transient `disabled=true` flicker eats the click; (2) buttons react to `click` (needs pointerdown+up on the same element) while the game canvas acts on `pointerdown` — a slight cursor drag during the press cancels the button click; consider firing HUD buttons on `pointerdown` instead; (3) pointer-events layering of `#hud` (container is `pointer-events:none`, buttons re-enable it). Only mutate DOM in `hud.update()` when values actually changed.
+- ~~**HUD buttons unresponsive** (user playtest 2026-07-07)~~ **FIXED 2026-07-07** with Phase 4: HUD buttons now fire on `pointerdown` (canvas parity, drag-during-press can't cancel) and `hud.update()` only mutates the DOM when values actually change. Confirm in next browser playtest.
 
 ## Session log
 
@@ -109,3 +109,4 @@ Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
 - **2026-07-07 (later)** — Phase 4 NOT started: an agent was launched for it but stopped almost immediately (user's usage budget ran out mid-session). No Phase 4 code exists. User playtested Phase 3: "looks surprisingly good"; one item backburnered to Phase 5 (upgrade preview in tower panel, see Phase 5 list). **Resume here: implement Phase 4 per the checklist above and GAME-DESIGN.md §6/§7.**
 - **2026-07-07** — Phase 3 complete: bomber/diver/UFO (`src/sim/raiders.ts` + bombs), upgrade/sell/priority via tower panel (`src/sim/actions.ts`), waves 1–15 (volleys stubbed as warnings), bonus city at wave 10, shared RNG (`src/sim/rng.ts`). **Second playtest feedback applied:** gun rebalanced to long-range/weak (range 80/alt 90, 8 dps T1) vs flak short-range/heavy — user found original gun range left ~1 min dead time; GAME-DESIGN.md §4 updated. Smoke test is now an auto-player that clears all 15 waves (6/6 cities, score ~15k). Session paused here at user request (usage budget). **Next agent: Phase 4 = GAME-DESIGN.md §6/§7, the dual-viewport interception.** Watch for: sim must keep running during coordinate view; battery placement required before round 1 (currently not enforced — add when battery exists). *(Superseded 2026-07-07 review: battery is now pre-placed, no placement gate.)*
 - **2026-07-07** — Playtest-notes review (`playtestnotes.md`) via design interview before Phase 4. Decisions: 9 weapon ideas → §14 backlog (curate 2–3 after Phase 4); persistent radar overlay added to Phase 4 scope (new §11.4 — answers §15 Q3); free battery now **pre-placed at map center**, dormant + unsellable (user idea mid-review); early-start bonus cut; battery "spread" = blast radius (already in tiers), direction question logged as §15 Q7; spawn-spread → Phase 5; economy + stronger-enemy-volume tuning → Phase 6. Both docs amended.
+- **2026-07-07** — Phase 4 complete: missile sim (`src/sim/missiles.ts` — volleys, bézier warheads, batteries, interceptors, blast kill check), coordinate view (`src/render/coordview.ts` — dual ortho viewports, volley frame, 0.6s swing, both aim schemes, [F] toggle), radar overlay (`src/ui/radar.ts`), siren stub (`src/ui/siren.ts`), alert banner + coord HUD strip in `hud.ts`. Central battery pre-placed with wake light. Smoke auto-player now leads shots along warhead arcs: waves 1–15 clear 6/6 cities, all 12 warheads intercepted, counterforce at 15 included. `npm run build` clean. **Awaiting user browser playtest** of: view swing feel, both fire schemes (pick default → §15 Q1), radar readability, HUD button fix. **Next: Phase 5** (waves 16–50 + boss stages + spawn-spread, audio, art pass, settings).
