@@ -20,6 +20,7 @@ function mulberry32(seed: number): () => number {
 function buildCity(index: number): THREE.Group {
   const rand = mulberry32(1000 + index * 77);
   const group = new THREE.Group();
+  const blocks: THREE.Mesh[] = [];
   const blockCount = 3 + Math.floor(rand() * 4); // 3–6 boxes per city
   for (let i = 0; i < blockCount; i++) {
     const w = 4 + rand() * 5;
@@ -35,7 +36,21 @@ function buildCity(index: number): THREE.Group {
     const r = rand() * 7;
     mesh.position.set(Math.cos(angle) * r, h / 2, Math.sin(angle) * r);
     group.add(mesh);
+    blocks.push(mesh);
   }
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: PALETTE.cityCyan,
+    transparent: true,
+    opacity: 0.12,
+    depthWrite: false,
+  });
+  const glow = new THREE.Mesh(new THREE.IcosahedronGeometry(12, 1), glowMat);
+  glow.scale.y = 0.22;
+  glow.position.y = 2.6;
+  group.add(glow);
+  group.userData.blocks = blocks;
+  group.userData.glow = glow;
+  group.userData.glowMat = glowMat;
   return group;
 }
 

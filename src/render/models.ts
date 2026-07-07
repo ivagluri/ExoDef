@@ -16,15 +16,22 @@ export const MODEL_COLORS = {
   ufoDome: 0x8fd8ff,
   mothership: 0x8f8cff,
   mothershipCore: 0xff5a5a,
-  bomb: 0x3a2430,
+  bossBayFlash: 0xffd9a0,
+  bomb: 0xff7a2d,
+  bombCore: 0x3a2430,
   shell: 0xffd9a0,
   tracer: 0xfff6c0,
   blast: 0xe8fdff,
+  flakBlast: 0xffd9a0,
+  impactBlast: 0xff6a2a,
   warhead: 0xffffff,
   warheadTrail: 0xff2b2b, // the Missile Command signature (§12)
-  interceptorTrail: 0xf2f6ff,
+  interceptor: 0xe8fdff,
+  interceptorTrail: 0x9fe8ee,
   rangeDome: PALETTE.cityCyan,
 } as const;
+
+export type BlastVisual = "intercept" | "flak" | "impact" | "bossBay";
 
 function lambert(color: number): THREE.MeshLambertMaterial {
   return new THREE.MeshLambertMaterial({ color });
@@ -98,23 +105,36 @@ export function makeEnemyModel(defId: string): THREE.Object3D {
   }
   if (defId === "mothership") {
     const group = new THREE.Group();
-    const hull = new THREE.Mesh(new THREE.CylinderGeometry(18, 24, 9, 8), lambert(MODEL_COLORS.mothership));
+    const hullMat = lambert(MODEL_COLORS.mothership);
+    const bayMat = lambert(MODEL_COLORS.mothershipCore);
+    const hull = new THREE.Mesh(new THREE.CylinderGeometry(18, 24, 9, 8), hullMat);
     const bridge = new THREE.Mesh(new THREE.BoxGeometry(16, 6, 11), lambert(MODEL_COLORS.mothership));
     bridge.position.y = 6;
-    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(4, 0), lambert(MODEL_COLORS.mothershipCore));
-    core.position.y = -6;
-    const podA = new THREE.Mesh(new THREE.CylinderGeometry(3, 4, 8, 6), lambert(MODEL_COLORS.mothership));
-    podA.position.set(-14, -4, 3);
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(4, 0), bayMat);
+    core.position.y = 8;
+    const podA = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 4.4, 10, 6), hullMat);
+    podA.rotation.z = Math.PI / 2;
+    podA.position.set(-23, -1.5, 0);
     const podB = podA.clone();
-    podB.position.x = 14;
-    group.add(hull, bridge, core, podA, podB);
+    podB.position.x = 23;
+    const bayA = new THREE.Mesh(new THREE.BoxGeometry(1.8, 4.2, 7), bayMat);
+    bayA.position.set(-28, -1.5, 0);
+    const bayB = bayA.clone();
+    bayB.position.x = 28;
+    group.add(hull, bridge, core, podA, podB, bayA, bayB);
     return group;
   }
   return new THREE.Mesh(new THREE.SphereGeometry(3, 8, 6), lambert(0xff00ff));
 }
 
-export function makeBombModel(): THREE.Mesh {
-  return new THREE.Mesh(new THREE.SphereGeometry(1.2, 6, 5), lambert(MODEL_COLORS.bomb));
+export function makeBombModel(): THREE.Object3D {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.ConeGeometry(1.5, 4.2, 6), lambert(MODEL_COLORS.bomb));
+  body.rotation.x = Math.PI;
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.8, 6, 5), lambert(MODEL_COLORS.bombCore));
+  core.position.y = 1.5;
+  group.add(body, core);
+  return group;
 }
 
 export function makeShellModel(): THREE.Mesh {
@@ -123,17 +143,27 @@ export function makeShellModel(): THREE.Mesh {
 
 export function makeWarheadModel(): THREE.Mesh {
   // white point per §12; the red ribbon trail is drawn by RenderSync
-  return new THREE.Mesh(new THREE.SphereGeometry(1.4, 8, 6), new THREE.MeshBasicMaterial({ color: MODEL_COLORS.warhead }));
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(1.75, 8, 6),
+    new THREE.MeshBasicMaterial({ color: MODEL_COLORS.warhead, depthTest: false }),
+  );
+  mesh.renderOrder = 10;
+  return mesh;
 }
 
 export function makeInterceptorModel(): THREE.Mesh {
-  return new THREE.Mesh(new THREE.SphereGeometry(0.9, 6, 5), new THREE.MeshBasicMaterial({ color: MODEL_COLORS.warhead }));
+  return new THREE.Mesh(new THREE.SphereGeometry(0.95, 6, 5), new THREE.MeshBasicMaterial({ color: MODEL_COLORS.interceptor }));
 }
 
-export function makeBlastModel(): THREE.Mesh {
+export function makeBlastModel(kind: BlastVisual = "intercept"): THREE.Mesh {
+  const color =
+    kind === "impact" ? MODEL_COLORS.impactBlast :
+    kind === "flak" ? MODEL_COLORS.flakBlast :
+    kind === "bossBay" ? MODEL_COLORS.bossBayFlash :
+    MODEL_COLORS.blast;
   return new THREE.Mesh(
     new THREE.IcosahedronGeometry(1, 1),
-    new THREE.MeshBasicMaterial({ color: MODEL_COLORS.blast, transparent: true, opacity: 0.8 }),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.72, depthWrite: false }),
   );
 }
 

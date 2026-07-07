@@ -139,6 +139,14 @@ function warheadsFor(round: number): number {
   return Math.min(cap, 2 + Math.floor((round - 5) / 4));
 }
 
+export function representativeMissilesForRound(round: number): Required<NonNullable<WaveDef["missiles"]>> {
+  const scaledRound = Math.max(5, round || 5);
+  return {
+    warheads: warheadsFor(scaledRound),
+    counterforce: scaledRound >= WAVE_SCALING.formulaBaseRound,
+  };
+}
+
 function missileDef(round: number): WaveDef["missiles"] {
   const generatedVolley = round <= WAVE_GOAL
     ? followsPattern(round, WAVE_SCALING.volleyFirstGeneratedRound, WAVE_SCALING.volleyGapPattern)
@@ -154,6 +162,13 @@ function bossHpScale(round: number): number {
   if (round === 45) return WAVE_SCALING.bossHpScaleWave45;
   if (round === WAVE_GOAL) return WAVE_SCALING.bossHpScaleWave50;
   return 1;
+}
+
+export function representativeBossHpScale(round: number): number {
+  if (round >= WAVE_GOAL) return bossHpScale(WAVE_GOAL);
+  if (round >= 45) return bossHpScale(45);
+  if (round >= 30) return bossHpScale(30);
+  return bossHpScale(15);
 }
 
 function isBossRound(round: number): boolean {

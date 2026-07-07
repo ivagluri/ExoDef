@@ -52,8 +52,10 @@ export function killEnemy(state: GameState, enemy: Enemy): void {
 }
 
 /** Ground detonation: destroys towers in radius, deals 1 hit to cities in radius. */
-export function detonateAt(state: GameState, pos: THREE.Vector3, radius: number = GRUNT.detonateRadius): void {
-  state.effects.blasts.push({ pos: pos.clone().setY(2), radius, ttl: 0.6, maxTtl: 0.6 });
+export function detonateAt(state: GameState, pos: THREE.Vector3, radius: number = GRUNT.detonateRadius, showEffect = true): void {
+  if (showEffect) {
+    state.effects.blasts.push({ pos: pos.clone().setY(2), radius, ttl: 0.55, maxTtl: 0.55, kind: "impact" });
+  }
   for (const tower of state.towers) {
     if (tower.alive && tower.pos.distanceTo(pos) <= radius + 4) {
       tower.alive = false;

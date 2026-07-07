@@ -28,14 +28,14 @@ export function inboundCount(state: GameState): number {
 }
 
 /** Called by startRound for waves with a missiles entry (§9). */
-export function launchVolley(state: GameState, warheads: number, counterforce: boolean): void {
+export function launchVolley(state: GameState, warheads: number, counterforce: boolean, firstAt: number = VOLLEY.firstLaunchDelay): void {
   const angle = rand() * Math.PI * 2; // one random compass direction per volley
   const heading = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
 
   // Stagger the launches; each warhead picks its target at launch time so
   // late warheads aim at what's still standing.
   const pending: { at: number }[] = [];
-  let at = VOLLEY.firstLaunchDelay;
+  let at = firstAt;
   for (let i = 0; i < warheads; i++) {
     pending.push({ at });
     at += randRange(VOLLEY.staggerMin, VOLLEY.staggerMax);
@@ -122,11 +122,11 @@ export function warheadPointAt(w: Warhead, t: number, out = new THREE.Vector3())
 
 function warheadImpact(state: GameState, w: Warhead): void {
   w.alive = false;
-  state.effects.blasts.push({ pos: w.p2.clone().setY(2), radius: VOLLEY.warheadSplash, ttl: 0.8, maxTtl: 0.8 });
+  state.effects.blasts.push({ pos: w.p2.clone().setY(2), radius: VOLLEY.warheadSplash, ttl: 0.7, maxTtl: 0.7, kind: "impact" });
   // §8: direct city target destroyed outright; splash destroys towers and
   // deals a normal 1-hit to any other city caught in it.
   if (w.targetKind === "city") damageCity(state, w.targetId, 2);
-  detonateAt(state, w.p2, VOLLEY.warheadSplash);
+  detonateAt(state, w.p2, VOLLEY.warheadSplash, false);
 }
 
 /** Launch pending warheads, advance arcs, land impacts. Combat phase only. */

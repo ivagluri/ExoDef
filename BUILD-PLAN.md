@@ -11,7 +11,7 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 5 IN PROGRESS — all non-art polish implemented; art/readability pass next** (updated 2026-07-07)
+**Status: Phase 5 IN PROGRESS — art/readability pass implemented; optional beam/radar towers remain deferred** (updated 2026-07-07)
 
 > **Resume here (fresh context):** read GAME-DESIGN.md first, then continue Phase 5 with the remaining art/readability pass. Waves 16–50/freeplay/victory, bonus cities, mothership boss stages, WebAudio cues, settings, local high score, and upgrade preview are implemented. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is titled **EXODEF**. Still open from §15: default fire scheme (Q1) and all Phase 6 tuning items.
 
@@ -83,7 +83,7 @@ Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additi
 - [x] **Boss stages** (§5 mothership, §9): mega enemy at waves 15/30/45 that descends slowly and emits grunts/divers, escalating per appearance; wave 50 finale = boss + max volley. Note: wave 15's current grunt/bomber composition in `src/sim/waves.ts` gets replaced by the boss. (User idea, added 2026-07-07)
 - [x] Bonus cities at every ×10 milestone
 - [x] Audio: WebAudio synth cues — siren (the star), gun/flak/launch/blast/city-drone/round-sting/UFO warble (§12)
-- [ ] Art pass: palette compliance, warhead ribbon trails, blast icosphere, damaged-city states, UFO model
+- [x] Art pass: palette compliance, warhead ribbon trails, blast icosphere, damaged-city states, UFO model
 - [x] Settings panel (fire scheme toggle — absorb the [F] hotkey; game speed; volume)
 - [x] localStorage high score
 - [x] Upgrade preview: tower panel shows what the next tier actually changes (dps/range/alt deltas) — playtest feedback 2026-07-07, backburnered from Phase 3
@@ -98,13 +98,17 @@ Driven by user playtests against GAME-DESIGN.md §15's open questions. No new sy
 Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
 - Economy is too generous — tighten income/bounties/costs together
 - Stronger-enemy volume too low as stages progress (grunt swarms stay too easy); lever undecided: wave composition vs. enemy strength vs. economy
-- Battery upgrade direction: bigger blast radius vs. fan-shot (§15 Q7)
+- Battery upgrade direction: bigger blast radius vs. fan-shot (§15 Q7).  further ideas: first upgrade, "persist" blast (couple seconds burn zone so accuracy is less critical), second upgrade, "cluster warhead", explodes in a 3-d triangular diamond shape, 4 blast points, costly upgrade as it would greatly decrease accuracy requirement.
 
 ---
 
 ## Known issues
 
 - ~~**HUD buttons unresponsive** (user playtest 2026-07-07)~~ **FIXED 2026-07-07** with Phase 4: HUD buttons now fire on `pointerdown` (canvas parity, drag-during-press can't cancel) and `hud.update()` only mutates the DOM when values actually change. Confirm in next browser playtest.
+
+## Backlog notes
+
+- Should cores/cities become repairable later? Defer to the orbital-platform/core reframe and Phase 6+ balance discussion; not part of the Phase 5 readability pass.
 
 ## Session log
 
@@ -120,3 +124,4 @@ Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
 - **2026-07-07 (Phase 5 chunk 2)** — Implemented mothership boss as a normal targetable enemy (`mothership` def + flat-shaded model + radar dot): large hull targeting, slow descent/roam, grunt/diver emissions from underside, low-altitude bomb drops, and escalating HP for waves 15/30/45/50. Wave 15 now replaces the old normal composition with boss + counterforce volley; wave 50 is boss + max volley. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cities.
 - **2026-07-07 (Phase 5 chunk 3)** — Implemented WebAudio pass and settings panel. Siren is a harsh stacked sawtooth/bandpass wail per user direction; repeated cues use lower-gain sine/square synths (gun, flak, interceptor launch, blasts, city hit/death, round clear, UFO warble). Settings panel now controls fire scheme, current game speed, and volume; fire scheme + volume persist in localStorage. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cities.
 - **2026-07-07 (Phase 5 chunk 4)** — Implemented localStorage high score and tower upgrade preview. HUD top bar and end overlays show BEST score; the tower panel now summarizes current tier and next-tier deltas from `TOWER_DEFS` (DPS/range/alt, flak rate/AoE, battery speed/reload/blast/ammo/silos). Hot-reload guard added so BEST never renders `undefined` during dev. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cities.
+- **2026-07-07 (Phase 5 art/readability pass)** — Implemented focused gameplay-readability polish: warheads now use larger white points plus solid red mesh ribbon trails; interceptors use shorter cyan-white trails and cyan blasts; ground/warhead impacts use warm red-orange blast spheres; city/core clusters have healthy cyan pulse and damaged red flicker while destroyed clusters remain dark; mothership emissions moved to visible side bays with brief flashes; bombs and mothership side bays got silhouette/readability tweaks; radar/crosshair/preview contrast tuned. Added secondary HUD settings buttons for `TEST MISSILES` and `TEST BOSS`; test threats run through normal sim damage/bounties without advancing round progression or granting round-clear income.

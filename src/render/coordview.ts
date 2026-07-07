@@ -63,7 +63,7 @@ export class CoordinateView {
   ) {
     this.scheme = scheme;
 
-    const mat = new THREE.LineBasicMaterial({ color: 0x35e0e8 });
+    const mat = new THREE.LineBasicMaterial({ color: 0xe8fdff, depthTest: false });
     this.crosshair = new THREE.Group();
     const arm = 7;
     for (const dir of [new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)]) {
@@ -76,12 +76,12 @@ export class CoordinateView {
     this.crosshair.visible = false;
     scene.add(this.crosshair);
 
-    const dropMat = new THREE.LineBasicMaterial({ color: 0x35e0e8, transparent: true, opacity: 0.3 });
+    const dropMat = new THREE.LineBasicMaterial({ color: 0x35e0e8, transparent: true, opacity: 0.55, depthTest: false });
     this.dropLine = new THREE.Line(new THREE.BufferGeometry(), dropMat);
     this.dropLine.visible = false;
     scene.add(this.dropLine);
 
-    const prevMat = new THREE.LineBasicMaterial({ color: 0xf2f6ff, transparent: true, opacity: 0.45 });
+    const prevMat = new THREE.LineBasicMaterial({ color: 0xe8fdff, transparent: true, opacity: 0.62, depthTest: false });
     this.previewLine = new THREE.Line(new THREE.BufferGeometry(), prevMat);
     this.previewLine.visible = false;
     scene.add(this.previewLine);

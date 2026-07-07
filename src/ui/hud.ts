@@ -33,6 +33,8 @@ export function createHud(handlers: {
   onFireScheme: (scheme: FireScheme) => void;
   onSpeedValue: (speed: number) => void;
   onVolume: (volume: number) => void;
+  onTestMissiles: () => void;
+  onTestBoss: () => void;
 }): Hud {
   const hud = document.getElementById("hud")!;
   hud.innerHTML = `
@@ -123,6 +125,11 @@ export function createHud(handlers: {
       #hud .settingrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
       #hud .seg { display: flex; gap: 4px; }
       #hud .seg button { padding: 5px 8px; font-size: 11px; }
+      #hud .testrow { border-top: 1px solid #3a456855; padding-top: 8px; }
+      #hud .testrow button {
+        padding: 5px 7px; font-size: 10px; color: #b9c3e2;
+        border-color: #4a5578; background: #101729cc; opacity: 0.82;
+      }
       #hud input[type="range"] { width: 118px; accent-color: #35e0e8; }
     </style>
     <div class="bar top">
@@ -170,6 +177,13 @@ export function createHud(handlers: {
       <div class="settingrow">
         <span>VOLUME</span>
         <input data-el="volume" type="range" min="0" max="100" step="1" />
+      </div>
+      <div class="settingrow testrow">
+        <span>TEST</span>
+        <span class="seg">
+          <button data-el="testMissiles">TEST MISSILES</button>
+          <button data-el="testBoss">TEST BOSS</button>
+        </span>
       </div>
     </div>
     <div class="gameover" data-el="gameover">
@@ -231,6 +245,8 @@ export function createHud(handlers: {
   press(el("schemeCommit"), () => handlers.onFireScheme("commit"));
   press(el("speed1"), () => handlers.onSpeedValue(1));
   press(el("speed3"), () => handlers.onSpeedValue(3));
+  press(el("testMissiles"), () => handlers.onTestMissiles());
+  press(el("testBoss"), () => handlers.onTestBoss());
   const volumeInput = el("volume") as HTMLInputElement;
   volumeInput.addEventListener("input", () => handlers.onVolume(Number(volumeInput.value) / 100));
 
@@ -249,6 +265,8 @@ export function createHud(handlers: {
       (el("speed3") as HTMLButtonElement).classList.toggle("sel", settings.simSpeed === 3);
       const volumeValue = String(Math.round(settings.volume * 100));
       if (volumeInput.value !== volumeValue) volumeInput.value = volumeValue;
+      setDisabled(el("testMissiles") as HTMLButtonElement, state.phase === "gameover" || state.volley !== null);
+      setDisabled(el("testBoss") as HTMLButtonElement, state.phase === "gameover");
       const bestScore = Math.max(settings.highScore ?? 0, state.score);
       if (coord.active) {
         // §11.3: ammo pips, auto-pick flight time, inbound count, scheme

@@ -82,9 +82,11 @@ export interface Shell {
 }
 
 /** Transient render-only effects, produced by the sim, aged by the sim. */
+export type BlastKind = "flak" | "impact" | "bossBay";
+
 export interface Effects {
   tracers: { from: THREE.Vector3; to: THREE.Vector3; ttl: number }[];
-  blasts: { pos: THREE.Vector3; radius: number; ttl: number; maxTtl: number }[];
+  blasts: { pos: THREE.Vector3; radius: number; ttl: number; maxTtl: number; kind?: BlastKind }[];
 }
 
 /** Ballistic warhead on a precomputed quadratic bézier arc (§6.1/§7.3 —
@@ -145,6 +147,7 @@ export interface GameState {
   score: number;
   round: number; // last started round (0 before round 1)
   phase: RoundPhase;
+  testCombat: boolean; // dev/test threats run like combat without advancing waves
   roundTime: number;
   pending: PendingSpawn[];
   cities: City[];
@@ -174,6 +177,7 @@ export function createGameState(): GameState {
     score: 0,
     round: 0,
     phase: "build",
+    testCombat: false,
     roundTime: 0,
     pending: [],
     cities: CITY_POSITIONS.map(([x, z], index) => ({

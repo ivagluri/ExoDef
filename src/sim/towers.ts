@@ -76,6 +76,7 @@ export function updateShells(state: GameState, dt: number): void {
         radius: shell.aoeRadius,
         ttl: 0.5,
         maxTtl: 0.5,
+        kind: "flak",
       });
       for (const enemy of state.enemies) {
         if (enemy.alive && enemy.pos.distanceTo(shell.target) <= shell.aoeRadius) {

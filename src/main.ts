@@ -7,7 +7,7 @@ import { CoordinateView, type FireScheme } from "./render/coordview";
 import { createWorld } from "./render/scene";
 import { RenderSync } from "./render/sync";
 import { cyclePriority, sellTower, upgradeTower } from "./sim/actions";
-import { simTick, startRound } from "./sim/game";
+import { simTick, startRound, triggerTestBoss, triggerTestMissiles } from "./sim/game";
 import { citiesAlive, createGameState } from "./sim/state";
 import { createHud } from "./ui/hud";
 import { createRadar } from "./ui/radar";
@@ -127,6 +127,14 @@ const hud = createHud({
     audio.unlock();
     setVolume(volume);
   },
+  onTestMissiles: () => {
+    audio.unlock();
+    triggerTestMissiles(state);
+  },
+  onTestBoss: () => {
+    audio.unlock();
+    triggerTestBoss(state);
+  },
 });
 
 // 3× fast-forward (playtest QoL 2026-07-07): scales how many fixed-size sim
@@ -161,7 +169,7 @@ function syncAudioEvents(): void {
   for (const effect of state.effects.blasts) {
     if (!heardBlastEffects.has(effect)) {
       heardBlastEffects.add(effect);
-      audio.blast(0.75);
+      if (effect.kind !== "bossBay") audio.blast(effect.kind === "impact" ? 0.9 : 0.75);
     }
   }
   for (const blast of state.interceptBlasts) {

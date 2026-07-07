@@ -16,11 +16,11 @@ const ALT_MAX = 170;
 const U_HALF = 130; // lateral world-units shown either side of center
 
 const DOT_STYLE: Record<string, { r: number; color: string }> = {
-  grunt: { r: 1.4, color: "#8a3a80" }, // dim — swarm reads as texture
-  bomber: { r: 2.6, color: "#54e05a" },
-  diver: { r: 2.4, color: "#ff5a5a" },
-  ufo: { r: 2.6, color: "#c8ccd8" },
-  mothership: { r: 5.2, color: "#8f8cff" },
+  grunt: { r: 1.25, color: "#74336c" }, // dim — swarm reads as texture
+  bomber: { r: 2.7, color: "#54e05a" },
+  diver: { r: 3.0, color: "#ff5a5a" },
+  ufo: { r: 2.7, color: "#c8ccd8" },
+  mothership: { r: 5.4, color: "#8f8cff" },
 };
 
 export interface Radar {
@@ -90,18 +90,24 @@ export function createRadar(): Radar {
       ctx.fillStyle = "#a9b6e0";
       ctx.fillText("RADAR", WIDTH - 34, 10);
 
-      // grunts first (background texture), raiders, then warheads on top
+      // grunts first (background texture), raiders/bombs, then warheads on top
       const sorted = [...state.enemies].sort((a, b) => (a.defId === "grunt" ? -1 : 1) - (b.defId === "grunt" ? -1 : 1));
       for (const enemy of sorted) {
         if (!enemy.alive) continue;
         const style = DOT_STYLE[enemy.defId] ?? { r: 3, color: "#ffffff" };
         dot(enemy.pos.dot(right), enemy.pos.y, style.r, style.color);
       }
+      for (const bomb of state.bombs) {
+        if (!bomb.alive) continue;
+        const u = bomb.pos.dot(right);
+        dot(u, bomb.pos.y, 2.4, "#ff7a2d");
+        dot(u, bomb.pos.y, 0.9, "#3a2430");
+      }
       for (const w of state.warheads) {
         if (!w.alive) continue;
         const u = w.pos.dot(right);
-        dot(u, w.pos.y, 3.4, "#ff2b2b");
-        dot(u, w.pos.y, 1.4, "#ffffff");
+        dot(u, w.pos.y, 4.2, "#ff2b2b");
+        dot(u, w.pos.y, 1.7, "#ffffff");
       }
     },
   };

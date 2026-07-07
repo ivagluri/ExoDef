@@ -173,7 +173,9 @@ function emitFromBoss(state: GameState, enemy: Enemy): void {
   const ai = enemy.ai!;
   const scale = ai.hpScale ?? 1;
   ai.emitCount = (ai.emitCount ?? 0) + 1;
-  const origin = enemy.pos.clone().add(new THREE.Vector3(randRange(-10, 10), -18, randRange(-10, 10)));
+  const side = ai.emitCount % 2 === 0 ? -1 : 1;
+  const origin = enemy.pos.clone().add(new THREE.Vector3(side * 22, -3, randRange(-5, 5)));
+  state.effects.blasts.push({ pos: origin.clone(), radius: 6, ttl: 0.22, maxTtl: 0.22, kind: "bossBay" });
   const grunts = MOTHERSHIP.emitGrunts + Math.floor((scale - 1) * MOTHERSHIP.emitGruntGrowth);
   spawnGruntGroup(
     state,

@@ -6,7 +6,7 @@ import { spawnBomber, spawnDiver, spawnMothership, spawnUfo, updateBombs, update
 import { rand } from "./rng";
 import { citiesAlive, toast, type GameState } from "./state";
 import { updateShells, updateTowers } from "./towers";
-import { waveDef, waveSpawns } from "./waves";
+import { representativeBossHpScale, representativeMissilesForRound, waveDef, waveSpawns } from "./waves";
 
 // Round flow (GAME-DESIGN.md §3): build freely → START ROUND → combat (building
 // still allowed) → wave clear → city income → build. Player-paced.
@@ -15,6 +15,7 @@ export function startRound(state: GameState): boolean {
   if (state.phase !== "build") return false;
   state.round++;
   state.roundTime = 0;
+  state.testCombat = false;
   state.pending = waveSpawns(state.round);
 
   // bonus UFO chance (§9)
@@ -48,6 +49,11 @@ function checkRoundClear(state: GameState): void {
   if (state.pending.length > 0 || state.enemies.length > 0 || state.bombs.length > 0) return;
   if (state.volley !== null) return; // volley still inbound (§6: round continues)
   state.phase = "build";
+  if (state.testCombat) {
+    state.testCombat = false;
+    toast(state, "TEST THREATS CLEARED", 2);
+    return;
+  }
   const survivors = citiesAlive(state);
   const income = survivors * ECONOMY.cityIncome;
   state.cash += income;
@@ -70,6 +76,37 @@ function checkRoundClear(state: GameState): void {
     state.score += bonus;
     toast(state, `VICTORY — WAVE 50 CLEAR — CITY BONUS +${bonus}`, 8);
   }
+}
+
+function beginTestCombat(state: GameState): boolean {
+  if (state.phase === "gameover") return false;
+  if (state.phase === "build") {
+    state.phase = "combat";
+    state.testCombat = true;
+    state.roundTime = 0;
+    state.pending = [];
+  }
+  return true;
+}
+
+export function triggerTestMissiles(state: GameState): boolean {
+  if (state.volley !== null) {
+    toast(state, "VOLLEY ALREADY ACTIVE", 1.5);
+    return false;
+  }
+  if (!beginTestCombat(state)) return false;
+  const missiles = representativeMissilesForRound(state.round);
+  launchVolley(state, missiles.warheads, missiles.counterforce, state.roundTime + 0.2);
+  toast(state, `TEST MISSILES — ${missiles.warheads} INBOUND`, 2.5);
+  return true;
+}
+
+export function triggerTestBoss(state: GameState): boolean {
+  if (!beginTestCombat(state)) return false;
+  const scale = representativeBossHpScale(state.round);
+  spawnMothership(state, scale);
+  toast(state, `TEST BOSS — ${scale.toFixed(2)}x`, 2.5);
+  return true;
 }
 
 function ageEffects(state: GameState, dt: number): void {
