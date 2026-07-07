@@ -11,9 +11,9 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 5 IN PROGRESS — waves/freeplay/victory, mothership bosses, audio, and settings implemented; art/high-score/upgrade-preview polish next** (updated 2026-07-07)
+**Status: Phase 5 IN PROGRESS — all non-art polish implemented; art/readability pass next** (updated 2026-07-07)
 
-> **Resume here (fresh context):** read GAME-DESIGN.md first, then continue Phase 5 with the remaining polish checklist: art pass, localStorage high score, and upgrade-preview UI. Waves 16–50/freeplay/victory, bonus cities, mothership boss stages, WebAudio cues, and the settings panel are implemented. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is titled **EXODEF**. Still open from §15: default fire scheme (Q1) and all Phase 6 tuning items.
+> **Resume here (fresh context):** read GAME-DESIGN.md first, then continue Phase 5 with the remaining art/readability pass. Waves 16–50/freeplay/victory, bonus cities, mothership boss stages, WebAudio cues, settings, local high score, and upgrade preview are implemented. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is titled **EXODEF**. Still open from §15: default fire scheme (Q1) and all Phase 6 tuning items.
 
 ---
 
@@ -85,8 +85,8 @@ Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additi
 - [x] Audio: WebAudio synth cues — siren (the star), gun/flak/launch/blast/city-drone/round-sting/UFO warble (§12)
 - [ ] Art pass: palette compliance, warhead ribbon trails, blast icosphere, damaged-city states, UFO model
 - [x] Settings panel (fire scheme toggle — absorb the [F] hotkey; game speed; volume)
-- [ ] localStorage high score
-- [ ] Upgrade preview: tower panel shows what the next tier actually changes (dps/range/alt deltas) — playtest feedback 2026-07-07, backburnered from Phase 3
+- [x] localStorage high score
+- [x] Upgrade preview: tower panel shows what the next tier actually changes (dps/range/alt deltas) — playtest feedback 2026-07-07, backburnered from Phase 3
 - [ ] Beam + radar towers IF budget allows (else backlog, §14)
 
 **DoD:** complete game per design doc, playable start → wave 50 → freeplay.
@@ -119,3 +119,4 @@ Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
 - **2026-07-07 (Phase 5 chunk 1)** — Implemented deterministic formula waves 16–50 plus freeplay generation, scaling HP/speed spawn metadata, generated missile scheduling, wave-50 victory/freeplay overlay, and wave-50 survivor score bonus. Extended smoke auto-player to spend late-game cash on more towers and backup batteries. Not done yet: mothership bosses, authored boss+max-volley finale, audio/art/settings/upgrade-preview work. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cities.
 - **2026-07-07 (Phase 5 chunk 2)** — Implemented mothership boss as a normal targetable enemy (`mothership` def + flat-shaded model + radar dot): large hull targeting, slow descent/roam, grunt/diver emissions from underside, low-altitude bomb drops, and escalating HP for waves 15/30/45/50. Wave 15 now replaces the old normal composition with boss + counterforce volley; wave 50 is boss + max volley. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cities.
 - **2026-07-07 (Phase 5 chunk 3)** — Implemented WebAudio pass and settings panel. Siren is a harsh stacked sawtooth/bandpass wail per user direction; repeated cues use lower-gain sine/square synths (gun, flak, interceptor launch, blasts, city hit/death, round clear, UFO warble). Settings panel now controls fire scheme, current game speed, and volume; fire scheme + volume persist in localStorage. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cities.
+- **2026-07-07 (Phase 5 chunk 4)** — Implemented localStorage high score and tower upgrade preview. HUD top bar and end overlays show BEST score; the tower panel now summarizes current tier and next-tier deltas from `TOWER_DEFS` (DPS/range/alt, flak rate/AoE, battery speed/reload/blast/ammo/silos). Hot-reload guard added so BEST never renders `undefined` during dev. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cities.

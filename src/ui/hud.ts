@@ -1,5 +1,5 @@
 import { WAVE_GOAL } from "../balance";
-import { BUILDABLE, TOWER_DEFS } from "../content/towers";
+import { BUILDABLE, TOWER_DEFS, type TowerTier } from "../content/towers";
 import type { CoordHudInfo, FireScheme } from "../render/coordview";
 import { sellRefund, towerById, upgradeCost } from "../sim/actions";
 import { aliveBatteries, batteryTier, inboundCount } from "../sim/missiles";
@@ -18,6 +18,7 @@ export interface HudSettings {
   fireScheme: FireScheme;
   simSpeed: number;
   volume: number;
+  highScore: number;
 }
 
 export function createHud(handlers: {
@@ -103,10 +104,15 @@ export function createHud(handlers: {
       #hud .tag b { color: #35e0e8; font-weight: normal; letter-spacing: 0.14em; }
       #hud .panel {
         position: absolute; right: 14px; bottom: 60px; display: flex;
-        flex-direction: column; gap: 6px; padding: 10px 12px;
+        flex-direction: column; gap: 6px; padding: 10px 12px; max-width: 286px;
         background: #141b31d9; border: 1px solid #3a4568; border-radius: 6px;
         font-size: 13px;
       }
+      #hud .stats {
+        color: #b9c3e2; font-size: 11px; line-height: 1.45; letter-spacing: 0.04em;
+        white-space: normal;
+      }
+      #hud .stats b { color: #35e0e8; font-weight: normal; }
       #hud .settingspanel {
         position: absolute; right: 14px; bottom: 112px; display: none;
         flex-direction: column; gap: 8px; padding: 10px 12px; min-width: 230px;
@@ -141,6 +147,7 @@ export function createHud(handlers: {
     <div class="coorddiv"></div>
     <div class="panel" data-el="panel" style="display:none">
       <div data-el="ptitle" style="letter-spacing:0.1em"></div>
+      <div class="stats" data-el="pstats"></div>
       <button data-el="pupgrade"></button>
       <button data-el="psell"></button>
       <button data-el="ppriority"></button>
@@ -173,6 +180,7 @@ export function createHud(handlers: {
     <div class="victory" data-el="victory">
       EXODEF HELD
       <small>WAVE 50 CLEAR</small>
+      <small data-el="victoryscore"></small>
       <small>FREEPLAY UNLOCKED</small>
     </div>
     <div class="tag"><b>EXODEF COMMAND</b> · 1/2/3 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
@@ -241,6 +249,7 @@ export function createHud(handlers: {
       (el("speed3") as HTMLButtonElement).classList.toggle("sel", settings.simSpeed === 3);
       const volumeValue = String(Math.round(settings.volume * 100));
       if (volumeInput.value !== volumeValue) volumeInput.value = volumeValue;
+      const bestScore = Math.max(settings.highScore ?? 0, state.score);
       if (coord.active) {
         // §11.3: ammo pips, auto-pick flight time, inbound count, scheme
         const pips = aliveBatteries(state).map((b, i) => {
@@ -257,7 +266,7 @@ export function createHud(handlers: {
       }
       setText(el("cash"), `$${state.cash}`);
       setText(el("round"), state.round === 0 ? "PLACE YOUR DEFENSES" : `ROUND ${state.round}`);
-      setText(el("right"), `⌂ ${citiesAlive(state)}/6 · SCORE ${state.score}`);
+      setText(el("right"), `⌂ ${citiesAlive(state)}/6 · SCORE ${state.score} · BEST ${bestScore}`);
       for (const [id, btn] of buttons) {
         btn.classList.toggle("sel", selection === id);
         setDisabled(btn, state.cash < TOWER_DEFS[id].cost && selection !== id);
@@ -285,6 +294,7 @@ export function createHud(handlers: {
         const def = TOWER_DEFS[tower.defId];
         const ammo = tower.battery && volleyOn ? ` · AMMO ${tower.battery.ammo}` : "";
         setText(el("ptitle"), `${def.name} T${tower.tier + 1}${ammo}`);
+        el("pstats").innerHTML = formatTowerStats(tower.defId, tower.tier);
         const upBtn = el("pupgrade") as HTMLButtonElement;
         const cost = upgradeCost(tower);
         setText(upBtn, cost === null ? "MAX TIER" : `UPGRADE $${cost}`);
@@ -298,9 +308,47 @@ export function createHud(handlers: {
 
       if (state.phase === "gameover") {
         setDisplay(el("gameover"), "flex");
-        setText(el("finalscore"), `FINAL SCORE ${state.score} — REACHED ROUND ${state.round}`);
+        setText(el("finalscore"), `FINAL SCORE ${state.score} — BEST ${bestScore} — REACHED ROUND ${state.round}`);
       }
+      setText(el("victoryscore"), `SCORE ${state.score} — BEST ${bestScore}`);
       setDisplay(el("victory"), state.won && state.phase === "build" && state.round === WAVE_GOAL ? "flex" : "none");
     },
   };
+}
+
+function formatTowerStats(defId: string, tierIndex: number): string {
+  const def = TOWER_DEFS[defId];
+  const current = def.tiers[tierIndex];
+  const next = def.tiers[tierIndex + 1];
+  const lines = [`<b>NOW</b> ${tierSummary(current, defId)}`];
+  lines.push(next ? `<b>NEXT</b> ${tierSummary(next, defId, current)}` : "<b>NEXT</b> MAX TIER");
+  return lines.join("<br>");
+}
+
+function tierSummary(tier: TowerTier, defId: string, prev?: TowerTier): string {
+  const parts: string[] = [];
+  if (tier.shot) {
+    parts.push(delta("DPS", Math.round(tier.shot.damage / tier.shot.period), prev?.shot && Math.round(prev.shot.damage / prev.shot.period)));
+    parts.push(delta("RNG", tier.rangeRadius, prev?.rangeRadius));
+    parts.push(delta("ALT", tier.maxAltitude, prev?.maxAltitude));
+  } else if (tier.burst) {
+    parts.push(delta("DMG", tier.burst.damage, prev?.burst?.damage));
+    parts.push(delta("RATE", Number((1 / tier.burst.period).toFixed(1)), prev?.burst && Number((1 / prev.burst.period).toFixed(1))));
+    parts.push(delta("AOE", tier.burst.aoeRadius, prev?.burst?.aoeRadius));
+    parts.push(delta("ALT", tier.maxAltitude, prev?.maxAltitude));
+  } else if (tier.interceptor) {
+    parts.push(delta("SPD", tier.interceptor.speed, prev?.interceptor?.speed));
+    parts.push(delta("RLD", tier.interceptor.reload, prev?.interceptor?.reload));
+    parts.push(delta("BLAST", tier.interceptor.blastRadius, prev?.interceptor?.blastRadius));
+    parts.push(delta("AMMO", tier.interceptor.ammoPerVolley, prev?.interceptor?.ammoPerVolley));
+    if (defId === "battery" || tier.interceptor.silos > 1) parts.push(delta("SILOS", tier.interceptor.silos, prev?.interceptor?.silos));
+  }
+  return parts.join(" · ");
+}
+
+function delta(label: string, value: number, prev?: number): string {
+  if (prev === undefined || value === prev) return `${label} ${value}`;
+  const change = Number((value - prev).toFixed(1));
+  const signed = change > 0 ? `+${change}` : String(change);
+  return `${label} ${value} (${signed})`;
 }

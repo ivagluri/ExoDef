@@ -14,6 +14,7 @@ import { createRadar } from "./ui/radar";
 import { AudioSystem } from "./ui/siren";
 
 const SETTINGS_KEY = "exodef.settings";
+const HIGH_SCORE_KEY = "exodef.highScore";
 
 interface StoredSettings {
   fireScheme: FireScheme;
@@ -33,6 +34,11 @@ function loadSettings(): StoredSettings {
   }
 }
 
+function loadHighScore(): number {
+  const value = Number(localStorage.getItem(HIGH_SCORE_KEY));
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
 const app = document.getElementById("app")!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -46,6 +52,7 @@ const state = createGameState();
 const sync = new RenderSync(world.scene, world.cities);
 const placement = new PlacementInput(renderer.domElement, iso.camera, world.scene, state);
 const settings = { ...loadSettings(), open: false };
+let highScore = loadHighScore();
 const audio = new AudioSystem(settings.volume);
 const coordView = new CoordinateView(world.scene, iso.camera, settings.fireScheme);
 renderer.domElement.addEventListener("pointerdown", (ev) => coordView.onPointerDown(ev, state));
@@ -64,6 +71,12 @@ function setVolume(volume: number): void {
   settings.volume = Math.max(0, Math.min(1, volume));
   audio.setVolume(settings.volume);
   saveSettings();
+}
+
+function updateHighScore(): void {
+  if (state.score <= highScore) return;
+  highScore = state.score;
+  localStorage.setItem(HIGH_SCORE_KEY, String(highScore));
 }
 
 const hud = createHud({
@@ -232,6 +245,7 @@ function frame(now: number): void {
     simTick(state, SIM_DT);
     accumulator -= SIM_DT;
   }
+  updateHighScore();
 
   const volleyOn = state.volley !== null;
   if (volleyOn && !volleyWasActive) {
@@ -254,6 +268,7 @@ function frame(now: number): void {
     fireScheme: settings.fireScheme,
     simSpeed,
     volume: settings.volume,
+    highScore,
   });
 
   // radar lateral axis: volley frame in coordinate view, else screen-right
