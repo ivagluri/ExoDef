@@ -502,6 +502,7 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 - Campaign / multiple maps, meta-progression
 - Real name (SKYFALL is a placeholder)
 - **Orbital-platform reframe + bypass lives** (2026-07-07, user): the battlefield is an orbital platform — the "cities" are support pillars / energy cores. Losing all of them isn't instant death: a Bloons-TD-style lives pool where only a certain number of enemies can bypass before it's over. Changes the loss condition (§3/§8); needs its own design pass.
+- **Branding to match the reframe** (2026-07-07, user): working title **"Exosphere Defence"**; in-game HUD carries a **"ExoDef Command"** mark on the playfield, the way vector-era arcade cabinets kept the game name on screen. Do together with the orbital-platform design pass so fiction, title, and HUD mark land as one piece (the "Command" suffix also tips the Missile Command homage). Decide spelling deliberately: Defence (UK) vs Defense (US — what Missile Command's era used).
 
 **Weapon ideas from the 2026-07-07 playtest (backlog; curate 2–3 winners after Phase 4 ships — notes preserved verbatim):**
 - **Frag bomb** — (no further notes yet)
