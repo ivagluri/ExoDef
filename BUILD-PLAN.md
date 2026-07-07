@@ -87,6 +87,10 @@ Driven by user playtests against GAME-DESIGN.md §15's open questions. No new sy
 
 ---
 
+## Known issues (fix in next session before/with Phase 4)
+
+- **HUD buttons unresponsive** (user playtest 2026-07-07): clicking START ROUND / upgrade panel buttons often takes multiple attempts. Suspects to check, in order: (1) `hud.update()` runs every animation frame and rewrites button `textContent`/`disabled` — a mid-click DOM mutation or a transient `disabled=true` flicker eats the click; (2) buttons react to `click` (needs pointerdown+up on the same element) while the game canvas acts on `pointerdown` — a slight cursor drag during the press cancels the button click; consider firing HUD buttons on `pointerdown` instead; (3) pointer-events layering of `#hud` (container is `pointer-events:none`, buttons re-enable it). Only mutate DOM in `hud.update()` when values actually changed.
+
 ## Session log
 
 - **2026-07-07** — Design doc completed and approved. Build plan created. Phase 1 started.
