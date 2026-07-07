@@ -72,6 +72,7 @@ Everything in GAME-DESIGN.md §6/§7.
 ## Phase 5 — Full arc & polish
 
 - [ ] Formula waves 16–50 + authored wave-50 finale + victory screen; freeplay 51+ (§9)
+- [ ] **Boss stages** (§5 mothership, §9): mega enemy at waves 15/30/45 that descends slowly and emits grunts/divers, escalating per appearance; wave 50 finale = boss + max volley. Note: wave 15's current grunt/bomber composition in `src/sim/waves.ts` gets replaced by the boss. (User idea, added 2026-07-07)
 - [ ] Bonus cities at every ×10 milestone
 - [ ] Audio: WebAudio synth cues — siren (the star), gun/flak/launch/blast/city-drone/round-sting/UFO warble (§12)
 - [ ] Art pass: palette compliance, warhead ribbon trails, blast icosphere, damaged-city states, UFO model

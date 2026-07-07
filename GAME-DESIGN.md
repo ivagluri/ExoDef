@@ -154,6 +154,7 @@ Cities have **2 HP**. Bomb hit = 1, grunt landing = 1, missile warhead = 2 (inst
 | **Bomber** ◆ | 60 | $25 | Picks a target (city 70% / tower 30%), flies to hover ~30 u above it, drops a bomb every 4s (bomb falls straight down, 1 hit to whatever's beneath, 6 u splash vs towers). Re-targets after destroying its target. The priority kill. |
 | **Diver** ↓ | 15 | $15 | Spawns at HIGH, cruises 3s, then plunges at 40 u/s straight at a random structure. Impact = same as grunt landing. Tests low-altitude reaction coverage. |
 | **Bonus UFO** ◑ | 80 | $150 | Rare (see wave table). Crosses the map at y≈100 (HIGH) at 25 u/s, on screen ~8–10s, harms nothing. Cash piñata — in v1 only T3 flak clips it; it mainly advertises the beam tower expansion. |
+| **Mothership (boss)** ⬢ | ~1500 [tunable] | $500 | **Boss stages** (added 2026-07-07, user idea): waves 15/30/45 are boss waves. One mega enemy — a huge slow hulk that descends gradually while **periodically emitting small enemies** (grunt clusters, occasional divers) from its underside. Long fight but not a bullet sponge: big hull = every tower connects, so time-to-kill stays reasonable [tunable in playtest]. Killing it ends the emission stream; if it reaches low altitude it becomes a slow roaming disaster (heavy bomb drops) rather than instantly detonating. Escalates per appearance (HP, emission rate). Wave 50 finale = mothership + max volley simultaneously. |
 
 Grunt descent speed and group HP scale with wave number (§9). All numbers **[tunable]**.
 
@@ -352,14 +353,15 @@ Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 city income + start
 | 12 | 18 grunts + 3 bombers | **☄ 3 warheads** |
 | 13 | 28 grunts + 4 bombers + 4 divers | |
 | 14 | 24 grunts + 4 bombers + 6 divers | pressure peak before… |
-| 15 | 20 grunts + 3 bombers | **☄ 4 warheads — counterforce debut (targets batteries)** |
+| 15 | **BOSS: mothership** (emits grunts/divers; replaces the normal ground wave) | **☄ 4 warheads — counterforce debut (targets batteries)** — boss + counterforce volley together is the intended intensity spike; if playtest says it's too much, move counterforce debut to 16 |
 
 ### Waves 16–50 (formula, hand-tuned exceptions allowed)
 
 - Enemy HP × `1.04^(wave−15)`; group counts +8% / wave (rounded); grunt descent speed +1% / wave **[tunable]**.
 - Volley every 3–4 waves; warheads `2 + floor((wave−5)/4)` cap 8; counterforce chance 25%.
 - Bonus city at each ×10 milestone.
-- Wave 50: authored finale — max volley (8, mixed counterforce) + heavy ground wave simultaneously. Victory screen after.
+- **Boss stages at 15/30/45**: mothership replaces the normal ground wave, escalating each time (HP, emission rate, emitted enemy mix).
+- Wave 50: authored finale — **mothership + max volley** (8, mixed counterforce) simultaneously. Victory screen after.
 
 ### Freeplay (51+)
 
@@ -474,7 +476,7 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 
 **Backlog (explicitly NOT v1):**
 - Beam tower (high-alt sniper, the UFO answer) & Radar tower (+range aura, +grace seconds, volley detail preview) — first additions, schemas already support them
-- More enemies: shielded tank, splitter, carrier (deploys mini-swarms), boss saucer
+- More enemies: shielded tank, splitter (mothership/boss stages were promoted into core v1 — see §5/§9)
 - MIRV warheads (split at MID — interception triage drama)
 - Gamepad support (twin-stick aiming maps beautifully to the two-viewport scheme)
 - Campaign / multiple maps, meta-progression
