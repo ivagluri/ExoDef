@@ -498,6 +498,7 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 - Beam tower (high-alt sniper, the UFO answer) & Radar tower (+range aura, +grace seconds, volley detail preview) — first additions, schemas already support them
 - More enemies: shielded tank, splitter (mothership/boss stages were promoted into core v1 — see §5/§9)
 - MIRV warheads (split at MID — interception triage drama)
+- **Converging volleys — multiple headings in one volley** (2026-07-07, user): warheads closing on the cores from several compass directions simultaneously. Today every volley already comes from a random direction, but all warheads *within* a volley share it — the coordinate view's whole frame (§7.1) and the top view's approach-side overage assume one heading. Multi-heading needs a view rethink: per-heading sub-volleys the player cycles between, or a symmetric top view with a rotating frame. Good candidate for a late-game/freeplay escalation once the basic plotting loop is proven.
 - Gamepad support (twin-stick aiming maps beautifully to the two-viewport scheme)
 - Campaign / multiple maps, meta-progression
 - Real name (SKYFALL is a placeholder)
