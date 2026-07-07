@@ -1,4 +1,6 @@
-# SKYFALL — Build Plan
+# EXODEF — Build Plan
+
+*(Retitled from SKYFALL 2026-07-07; the repo directory is still `skyfall/`.)*
 
 Companion to `GAME-DESIGN.md` (the spec — read it first; section references below are to it).
 This file is the **phase tracker**. Rules for any agent working on this project:
@@ -9,7 +11,9 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 4 COMPLETE (pending user browser playtest) — Phase 5 (full arc & polish) is next** (updated 2026-07-07)
+**Status: Phase 4 COMPLETE and user-playtested (fixes applied same session) — Phase 5 (full arc & polish) is next** (updated 2026-07-07)
+
+> **Resume here (fresh context):** read GAME-DESIGN.md first (§9 waves 16–50 formula, §5 mothership, §12 audio/art) then implement Phase 5 per its checklist below. Verify with `npm run build` + `npm run smoke` after sim changes; the user playtests with `npm run dev`. Game is now titled **EXODEF** (dir still `skyfall/`). Still open from §15: default fire scheme (Q1) and all Phase 6 tuning items.
 
 ---
 
@@ -70,7 +74,7 @@ Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additi
 - [x] Persistent radar overlay (§11.4): corner canvas in both views, camera-relative lateral × altitude — `src/ui/radar.ts`
 - [x] Sim continues during coordinate view — by construction: `main.ts` runs `simTick` before any view logic; the coordinate view touches only camera/render/input. Confirm the feel in browser playtest.
 
-**DoD:** waves 1–15 fully playable including real volleys at 5/9/12/15; counterforce at 15 threatens batteries; both input schemes work. *(Sim-level DoD verified headless: auto-player leads + intercepts all 12 warheads, 6/6 cities. Browser playtest of the view swing, aiming feel, and both schemes = user's next session.)*
+**DoD:** waves 1–15 fully playable including real volleys at 5/9/12/15; counterforce at 15 threatens batteries; both input schemes work. *(Verified headless — auto-player leads + intercepts all 12 warheads, 6/6 cities — and user-playtested 2026-07-07; the radar and top-view findings from that playtest are fixed, see session log.)*
 
 ## Phase 5 — Full arc & polish
 
@@ -80,7 +84,7 @@ Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additi
 - [ ] Bonus cities at every ×10 milestone
 - [ ] Audio: WebAudio synth cues — siren (the star), gun/flak/launch/blast/city-drone/round-sting/UFO warble (§12)
 - [ ] Art pass: palette compliance, warhead ribbon trails, blast icosphere, damaged-city states, UFO model
-- [ ] Settings panel (fire scheme toggle, volume); localStorage high score
+- [ ] Settings panel (fire scheme toggle — absorb the [F] hotkey; game speed; volume); localStorage high score
 - [ ] Upgrade preview: tower panel shows what the next tier actually changes (dps/range/alt deltas) — playtest feedback 2026-07-07, backburnered from Phase 3
 - [ ] Beam + radar towers IF budget allows (else backlog, §14)
 
@@ -109,4 +113,5 @@ Queued from the 2026-07-07 playtest (user deferred all three here deliberately):
 - **2026-07-07 (later)** — Phase 4 NOT started: an agent was launched for it but stopped almost immediately (user's usage budget ran out mid-session). No Phase 4 code exists. User playtested Phase 3: "looks surprisingly good"; one item backburnered to Phase 5 (upgrade preview in tower panel, see Phase 5 list). **Resume here: implement Phase 4 per the checklist above and GAME-DESIGN.md §6/§7.**
 - **2026-07-07** — Phase 3 complete: bomber/diver/UFO (`src/sim/raiders.ts` + bombs), upgrade/sell/priority via tower panel (`src/sim/actions.ts`), waves 1–15 (volleys stubbed as warnings), bonus city at wave 10, shared RNG (`src/sim/rng.ts`). **Second playtest feedback applied:** gun rebalanced to long-range/weak (range 80/alt 90, 8 dps T1) vs flak short-range/heavy — user found original gun range left ~1 min dead time; GAME-DESIGN.md §4 updated. Smoke test is now an auto-player that clears all 15 waves (6/6 cities, score ~15k). Session paused here at user request (usage budget). **Next agent: Phase 4 = GAME-DESIGN.md §6/§7, the dual-viewport interception.** Watch for: sim must keep running during coordinate view; battery placement required before round 1 (currently not enforced — add when battery exists). *(Superseded 2026-07-07 review: battery is now pre-placed, no placement gate.)*
 - **2026-07-07** — Playtest-notes review (`playtestnotes.md`) via design interview before Phase 4. Decisions: 9 weapon ideas → §14 backlog (curate 2–3 after Phase 4); persistent radar overlay added to Phase 4 scope (new §11.4 — answers §15 Q3); free battery now **pre-placed at map center**, dormant + unsellable (user idea mid-review); early-start bonus cut; battery "spread" = blast radius (already in tiers), direction question logged as §15 Q7; spawn-spread → Phase 5; economy + stronger-enemy-volume tuning → Phase 6. Both docs amended.
-- **2026-07-07** — Phase 4 complete: missile sim (`src/sim/missiles.ts` — volleys, bézier warheads, batteries, interceptors, blast kill check), coordinate view (`src/render/coordview.ts` — dual ortho viewports, volley frame, 0.6s swing, both aim schemes, [F] toggle), radar overlay (`src/ui/radar.ts`), siren stub (`src/ui/siren.ts`), alert banner + coord HUD strip in `hud.ts`. Central battery pre-placed with wake light. Smoke auto-player now leads shots along warhead arcs: waves 1–15 clear 6/6 cities, all 12 warheads intercepted, counterforce at 15 included. `npm run build` clean. **Awaiting user browser playtest** of: view swing feel, both fire schemes (pick default → §15 Q1), radar readability, HUD button fix. **Next: Phase 5** (waves 16–50 + boss stages + spawn-spread, audio, art pass, settings).
+- **2026-07-07** — Phase 4 complete: missile sim (`src/sim/missiles.ts` — volleys, bézier warheads, batteries, interceptors, blast kill check), coordinate view (`src/render/coordview.ts` — dual ortho viewports, volley frame, 0.6s swing, both aim schemes, [F] toggle), radar overlay (`src/ui/radar.ts`), siren stub (`src/ui/siren.ts`), alert banner + coord HUD strip in `hud.ts`. Central battery pre-placed with wake light. Smoke auto-player now leads shots along warhead arcs: waves 1–15 clear 6/6 cities, all 12 warheads intercepted, counterforce at 15 included. `npm run build` clean.
+- **2026-07-07 (playtest + wrap)** — User playtested Phase 4 live; all findings fixed in-session: **radar invisible** (canvas was created before `createHud()`'s innerHTML rebuild → drew to a detached element; also brightened band grid + window-scaled panel/labels 1×–1.6×); **top view empty for half of each volley** (entry moved from 260u-behind-target to fixed depth just past the platform edge, top viewport made asymmetric — V_BACK 165 / V_FRONT 115, §6.1 updated). Added **3× fast-forward** ([X]/HUD button; auto-resets to 1× at volley launch — keeps the siren moment honest). **Retitled EXODEF** with an EXODEF COMMAND playfield mark (arcade-style, HUD tag). Backlog grew: orbital-platform reframe + Bloons-style bypass lives, converging multi-heading volleys, branding (resolved). **Next agent: Phase 5** — waves 16–50 formula + spawn-spread, mothership boss (replaces wave 15's current composition), wave-50 finale + victory, audio pass (real siren), art pass, settings panel (absorb the [F]/[X] toggles), upgrade preview. Watch: boss at 15/30/45 escalation; §15 Q1 (default scheme) still undecided — user playtests will tell.

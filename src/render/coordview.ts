@@ -21,7 +21,7 @@ const Y_HALF = 90;
 // platform plus a little overage on the far side.
 const V_BACK = 165; // approach-side extent (covers entryOffset + jitter)
 const V_FRONT = 115; // far-side extent
-const SCHEME_KEY = "skyfall.fireScheme";
+const SCHEME_KEY = "exodef.fireScheme";
 
 export interface CoordHudInfo {
   active: boolean;

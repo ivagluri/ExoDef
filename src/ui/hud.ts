@@ -78,7 +78,9 @@ export function createHud(handlers: {
       #hud.coord .bar, #hud.coord .alert, #hud.coord .panel { display: none !important; }
       #hud.coord .coordbar { display: flex; }
       #hud.coord .coorddiv { display: block; }
-      #hud .tag { position: absolute; left: 12px; bottom: 54px; font-size: 11px; opacity: 0.45; }
+      #hud .tag { position: absolute; left: 12px; bottom: 54px; font-size: 11px; opacity: 0.6; }
+      /* the arcade playfield mark (§12 vibe): the game name lives on screen */
+      #hud .tag b { color: #35e0e8; font-weight: normal; letter-spacing: 0.14em; }
       #hud .panel {
         position: absolute; right: 14px; bottom: 60px; display: flex;
         flex-direction: column; gap: 6px; padding: 10px 12px;
@@ -116,7 +118,7 @@ export function createHud(handlers: {
       <small data-el="finalscore"></small>
       <small>reload the page to try again</small>
     </div>
-    <div class="tag">SKYFALL dev · phase 3 · 1/2 build · click tower: panel · Q/E rotate · scroll zoom · Enter: start</div>
+    <div class="tag"><b>EXODEF COMMAND</b> · 1/2/3 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
   `;
 
   const el = (name: string) => hud.querySelector<HTMLElement>(`[data-el="${name}"]`)!;
