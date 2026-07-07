@@ -123,7 +123,7 @@ Towers occupy a circular footprint (radius 6 u), placed freely on open ground (Â
 
 Additional batteries: **$600** each **[tunable]**. All numbers **[tunable]**.
 
-Targeting priority (per tower, cycle on click): First (lowest altitude) / Strongest / Closest. Default: First.
+Targeting priority (per tower, cycle on click): First (lowest altitude) / Strongest / Closest. Default: First, except AA Missile defaults to Strongest so its slow shots seek meaningful targets immediately.
 
 ### Data schema (builder reference)
 

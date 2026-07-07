@@ -8,6 +8,7 @@ import type { Enemy, GameState, Tower } from "./state";
 
 const MUZZLE_HEIGHT = 6;
 const DRONE_IDLE_HEIGHT = 9;
+const DRONE_SEPARATION = 4.2;
 
 function enemyHull(enemy: Enemy): number {
   return enemy.defId === "mothership" ? MOTHERSHIP.hullRadius : 0;
@@ -217,6 +218,29 @@ function acquireDroneTarget(state: GameState, tower: Tower): Enemy | null {
   return pickTarget(state, tower, tier.rangeRadius, tier.maxAltitude);
 }
 
+function separateDrones(state: GameState): void {
+  const minDist = DRONE_SEPARATION;
+  for (let i = 0; i < state.drones.length; i++) {
+    const a = state.drones[i];
+    if (!a.alive) continue;
+    for (let j = i + 1; j < state.drones.length; j++) {
+      const b = state.drones[j];
+      if (!b.alive) continue;
+      const delta = a.pos.clone().sub(b.pos);
+      let dist = delta.length();
+      if (dist >= minDist) continue;
+      if (dist < 0.001) {
+        delta.set(Math.cos(a.id + b.id), 0.2, Math.sin(a.id - b.id));
+        dist = delta.length();
+      }
+      const push = (minDist - dist) * 0.5;
+      delta.multiplyScalar(push / dist);
+      a.pos.add(delta);
+      b.pos.sub(delta);
+    }
+  }
+}
+
 export function updateDrones(state: GameState, dt: number): void {
   maintainDrones(state);
   for (const drone of state.drones) {
@@ -258,6 +282,7 @@ export function updateDrones(state: GameState, dt: number): void {
       drone.cooldown = Math.max(0, drone.cooldown - dt);
     }
   }
+  separateDrones(state);
   state.drones = state.drones.filter((d) => d.alive);
   state.enemies = state.enemies.filter((e) => e.alive);
 }

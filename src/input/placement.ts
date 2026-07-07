@@ -131,7 +131,7 @@ export class PlacementInput {
         tier: 0,
         pos: this.groundPoint.clone().setY(0),
         cooldown: 0,
-        priority: "first",
+        priority: def.id === "aaMissile" ? "strong" : "first",
         alive: true,
       };
       if (def.role === "interceptor") {

@@ -14,6 +14,7 @@ interface TrailRecord {
 }
 
 const TRAIL_UP = new THREE.Vector3(0, 1, 0);
+const MISSILE_FORWARD = new THREE.Vector3(0, 0, 1);
 
 export class RenderSync {
   private towerObjs = new Map<number, THREE.Object3D>();
@@ -106,7 +107,13 @@ export class RenderSync {
       () => makeAAMissileModel(),
       (m, obj) => {
         obj.position.copy(m.pos);
-        obj.rotation.y += 0.08;
+        const target = state.enemies.find((e) => e.id === m.targetId && e.alive);
+        if (target) {
+          const dir = target.pos.clone().sub(m.pos);
+          if (dir.lengthSq() > 0.001) {
+            obj.quaternion.setFromUnitVectors(MISSILE_FORWARD, dir.normalize());
+          }
+        }
       },
     );
     this.reconcile(
