@@ -1,5 +1,5 @@
 // Headless sim smoke test (no browser, no rendering): a simple auto-player builds
-// and upgrades a defense and runs the sim through all authored waves.
+// and upgrades a defense and runs the sim through the wave-50 victory goal.
 // Run with:  npm run smoke
 // Extend this as phases add systems — it's the fast regression check for agents.
 import * as THREE from "three";
@@ -24,22 +24,41 @@ const buildQueue: Array<[string, number, number]> = [
   ["gun", 0, -55],
   ["flak", -30, 55],
   ["flak", 55, 0],
+  ["battery", -55, 5],
+  ["battery", 55, 5],
+  ["flak", -80, -80],
+  ["gun", -45, -80],
+  ["flak", 45, -80],
+  ["gun", 80, -80],
+  ["flak", -85, -5],
+  ["gun", -45, 5],
+  ["gun", 45, 5],
+  ["flak", 85, -5],
+  ["gun", -85, 60],
+  ["flak", -35, 70],
+  ["flak", 35, 70],
+  ["gun", 85, 60],
+  ["flak", -15, -82],
+  ["flak", 15, -82],
 ];
 
+function tryBuildNext(s: GameState): boolean {
+  if (buildQueue.length === 0) return false;
+  const [defId, x, z] = buildQueue[0];
+  if (s.cash < TOWER_DEFS[defId].cost) return false;
+  s.cash -= TOWER_DEFS[defId].cost;
+  s.towers.push({
+    id: s.nextId++, defId, tier: 0,
+    pos: new THREE.Vector3(x, 0, z),
+    cooldown: 0, priority: "first", alive: true,
+    battery: defId === "battery" ? { ammo: 0, reloadLeft: 0, inFlight: 0 } : undefined,
+  });
+  buildQueue.shift();
+  return true;
+}
+
 function autoBuild(s: GameState): void {
-  if (buildQueue.length > 0) {
-    const [defId, x, z] = buildQueue[0];
-    if (s.cash >= TOWER_DEFS[defId].cost) {
-      s.cash -= TOWER_DEFS[defId].cost;
-      s.towers.push({
-        id: s.nextId++, defId, tier: 0,
-        pos: new THREE.Vector3(x, 0, z),
-        cooldown: 0, priority: "first", alive: true,
-      });
-      buildQueue.shift();
-    }
-    return;
-  }
+  if (tryBuildNext(s)) return;
   // queue done: upgrade the cheapest upgradable tower when cash is comfortable
   let best: { id: number; cost: number } | null = null;
   for (const t of s.towers) {

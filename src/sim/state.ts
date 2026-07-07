@@ -62,6 +62,7 @@ export interface GruntGroup {
   anchorZ: number;
   heading: number; // radians, XZ plane
   wanderSeed: number; // per-group phase for the serpentine wander
+  speedScale: number;
   /** enemy id → formation offset (+ per-member wobble phase) */
   members: { enemyId: number; dx: number; dz: number; phase: number }[];
 }
@@ -129,6 +130,8 @@ export interface PendingSpawn {
   at: number; // roundTime seconds
   enemy: string;
   count: number;
+  hpScale?: number;
+  speedScale?: number;
 }
 
 export interface GameState {
@@ -156,6 +159,7 @@ export interface GameState {
   message: string;
   messageTtl: number;
   citiesDirty: boolean; // city visuals need refresh
+  won: boolean; // wave 50 cleared; freeplay remains available
 }
 
 export function createGameState(): GameState {
@@ -200,6 +204,7 @@ export function createGameState(): GameState {
     message: "",
     messageTtl: 0,
     citiesDirty: false,
+    won: false,
   };
 }
 

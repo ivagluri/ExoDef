@@ -1,3 +1,4 @@
+import { WAVE_GOAL } from "../balance";
 import { BUILDABLE, TOWER_DEFS } from "../content/towers";
 import type { CoordHudInfo } from "../render/coordview";
 import { sellRefund, towerById, upgradeCost } from "../sim/actions";
@@ -53,6 +54,14 @@ export function createHud(handlers: {
         color: #ff5a5a; text-align: center;
       }
       #hud .gameover small { font-size: 14px; color: #d7dce8; letter-spacing: 0.08em; }
+      #hud .victory {
+        position: absolute; inset: 0; display: none; flex-direction: column;
+        align-items: center; justify-content: center; gap: 12px;
+        background: #070b1899; font-size: 34px; letter-spacing: 0.22em;
+        color: #35e0e8; text-align: center; pointer-events: none;
+        text-shadow: 0 1px 5px #000;
+      }
+      #hud .victory small { font-size: 14px; color: #d7dce8; letter-spacing: 0.1em; }
       #hud .alert {
         position: absolute; bottom: 108px; left: 0; right: 0; display: none;
         flex-direction: column; align-items: center; gap: 2px;
@@ -117,6 +126,11 @@ export function createHud(handlers: {
       ALL CITIES LOST
       <small data-el="finalscore"></small>
       <small>reload the page to try again</small>
+    </div>
+    <div class="victory" data-el="victory">
+      EXODEF HELD
+      <small>WAVE 50 CLEAR</small>
+      <small>FREEPLAY UNLOCKED</small>
     </div>
     <div class="tag"><b>EXODEF COMMAND</b> · 1/2/3 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
   `;
@@ -191,7 +205,8 @@ export function createHud(handlers: {
       }
       setDisplay(startBtn, state.phase === "build" ? "" : "none");
       const nextMissiles = waveDef(state.round + 1)?.missiles;
-      setText(startBtn, `▶ START ROUND ${state.round + 1}${nextMissiles ? " ⚠ MISSILES" : ""}`);
+      const startLabel = state.round >= WAVE_GOAL ? `▶ FREEPLAY ROUND ${state.round + 1}` : `▶ START ROUND ${state.round + 1}`;
+      setText(startBtn, `${startLabel}${nextMissiles ? " ⚠ MISSILES" : ""}`);
       const toastEl = el("toast");
       setText(toastEl, state.message);
       const toastOpacity = state.messageTtl > 0 ? "1" : "0";
@@ -226,6 +241,7 @@ export function createHud(handlers: {
         setDisplay(el("gameover"), "flex");
         setText(el("finalscore"), `FINAL SCORE ${state.score} — REACHED ROUND ${state.round}`);
       }
+      setDisplay(el("victory"), state.won && state.phase === "build" && state.round === WAVE_GOAL ? "flex" : "none");
     },
   };
 }

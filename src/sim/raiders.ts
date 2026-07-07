@@ -9,11 +9,11 @@ import type { Enemy, EnemyAI, GameState } from "./state";
 //   diver  — cruises briefly at HIGH, then plunges kamikaze-style
 //   ufo    — harmless high-altitude cash piñata transit
 
-function makeEnemy(state: GameState, defId: string, pos: THREE.Vector3, ai: EnemyAI): Enemy {
+function makeEnemy(state: GameState, defId: string, pos: THREE.Vector3, ai: EnemyAI, hpScale = 1): Enemy {
   const enemy: Enemy = {
     id: state.nextId++,
     defId,
-    hp: ENEMY_DEFS[defId].hp,
+    hp: Math.ceil(ENEMY_DEFS[defId].hp * hpScale),
     pos,
     alive: true,
     groupId: null,
@@ -23,7 +23,7 @@ function makeEnemy(state: GameState, defId: string, pos: THREE.Vector3, ai: Enem
   return enemy;
 }
 
-export function spawnBomber(state: GameState): void {
+export function spawnBomber(state: GameState, hpScale = 1): void {
   const angle = rand() * Math.PI * 2;
   const pos = new THREE.Vector3(
     Math.cos(angle) * BOMBER.spawnRadius,
@@ -35,20 +35,20 @@ export function spawnBomber(state: GameState): void {
     timer: 0,
     vel: new THREE.Vector3(),
     target: new THREE.Vector3(),
-  });
+  }, hpScale);
 }
 
-export function spawnDiver(state: GameState): void {
+export function spawnDiver(state: GameState, hpScale = 1): void {
   const pos = new THREE.Vector3(randRange(-70, 70), DIVER.spawnY, randRange(-70, 70));
   makeEnemy(state, "diver", pos, {
     mode: "cruise",
     timer: DIVER.cruiseTime + rand() * 2,
     vel: new THREE.Vector3(randRange(-1, 1), 0, randRange(-1, 1)).normalize().multiplyScalar(DIVER.cruiseSpeed),
     target: new THREE.Vector3(),
-  });
+  }, hpScale);
 }
 
-export function spawnUfo(state: GameState): void {
+export function spawnUfo(state: GameState, hpScale = 1): void {
   const dir = rand() < 0.5 ? 1 : -1;
   const pos = new THREE.Vector3(-UFO.edgeX * dir, UFO.altitude, randRange(-60, 60));
   makeEnemy(state, "ufo", pos, {
@@ -56,7 +56,7 @@ export function spawnUfo(state: GameState): void {
     timer: 0,
     vel: new THREE.Vector3(UFO.speed * dir, 0, 0),
     target: new THREE.Vector3(),
-  });
+  }, hpScale);
 }
 
 /** Pick a structure target; returns false if nothing is left to attack. */

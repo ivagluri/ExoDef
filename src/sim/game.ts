@@ -1,4 +1,4 @@
-import { CITY_HP, ECONOMY, SCORE } from "../balance";
+import { CITY_HP, ECONOMY, SCORE, WAVE_GOAL } from "../balance";
 import { UFO } from "../content/enemies";
 import { spawnGruntGroup, updateGroups } from "./enemies";
 import { launchVolley, updateInterceptors, updateWarheads } from "./missiles";
@@ -6,17 +6,13 @@ import { spawnBomber, spawnDiver, spawnUfo, updateBombs, updateRaiders } from ".
 import { rand } from "./rng";
 import { citiesAlive, toast, type GameState } from "./state";
 import { updateShells, updateTowers } from "./towers";
-import { WAVE_COUNT, waveDef, waveSpawns } from "./waves";
+import { waveDef, waveSpawns } from "./waves";
 
 // Round flow (GAME-DESIGN.md §3): build freely → START ROUND → combat (building
 // still allowed) → wave clear → city income → build. Player-paced.
 
 export function startRound(state: GameState): boolean {
   if (state.phase !== "build") return false;
-  if (state.round >= WAVE_COUNT) {
-    toast(state, `PHASE 3 CONTENT ENDS AT WAVE ${WAVE_COUNT} — WAVES 16–50 ARRIVE IN PHASE 5`);
-    return false;
-  }
   state.round++;
   state.roundTime = 0;
   state.pending = waveSpawns(state.round);
@@ -39,10 +35,11 @@ export function startRound(state: GameState): boolean {
 function spawnPending(state: GameState): void {
   while (state.pending.length > 0 && state.pending[0].at <= state.roundTime) {
     const entry = state.pending.shift()!;
-    if (entry.enemy === "grunt") spawnGruntGroup(state, entry.count);
-    else if (entry.enemy === "bomber") for (let i = 0; i < entry.count; i++) spawnBomber(state);
-    else if (entry.enemy === "diver") for (let i = 0; i < entry.count; i++) spawnDiver(state);
-    else if (entry.enemy === "ufo") spawnUfo(state);
+    const hp = entry.hpScale ?? 1;
+    if (entry.enemy === "grunt") spawnGruntGroup(state, entry.count, hp, entry.speedScale ?? 1);
+    else if (entry.enemy === "bomber") for (let i = 0; i < entry.count; i++) spawnBomber(state, hp);
+    else if (entry.enemy === "diver") for (let i = 0; i < entry.count; i++) spawnDiver(state, hp);
+    else if (entry.enemy === "ufo") spawnUfo(state, hp);
   }
 }
 
@@ -50,7 +47,8 @@ function checkRoundClear(state: GameState): void {
   if (state.pending.length > 0 || state.enemies.length > 0 || state.bombs.length > 0) return;
   if (state.volley !== null) return; // volley still inbound (§6: round continues)
   state.phase = "build";
-  const income = citiesAlive(state) * ECONOMY.cityIncome;
+  const survivors = citiesAlive(state);
+  const income = survivors * ECONOMY.cityIncome;
   state.cash += income;
   state.score += SCORE.roundClearPerWave * state.round;
   toast(state, `ROUND ${state.round} CLEAR — INCOME +$${income}`);
@@ -63,6 +61,13 @@ function checkRoundClear(state: GameState): void {
       state.citiesDirty = true;
       toast(state, "REINFORCEMENTS — CITY REBUILT", 5);
     }
+  }
+
+  if (state.round === WAVE_GOAL && !state.won) {
+    state.won = true;
+    const bonus = survivors * SCORE.wave50CityBonus;
+    state.score += bonus;
+    toast(state, `VICTORY — WAVE 50 CLEAR — CITY BONUS +${bonus}`, 8);
   }
 }
 

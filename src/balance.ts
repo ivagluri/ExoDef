@@ -57,6 +57,33 @@ export const ECONOMY = {
 // GAME-DESIGN.md §3 — score
 export const SCORE = {
   roundClearPerWave: 100,
+  wave50CityBonus: 500,
+} as const;
+
+// GAME-DESIGN.md §9 — wave arc and formula scaling [tunable]
+export const WAVE_GOAL = 50;
+export const WAVE_SCALING = {
+  formulaBaseRound: 15,
+  hpGrowthPerWave: 1.04,
+  countGrowthPerWave: 1.08,
+  gruntSpeedGrowthPerWave: 1.01,
+  freeplayHpGrowthPerWave: 1.06,
+  freeplayCountGrowthPerWave: 1.10,
+  formulaBaseGrunts: 20,
+  formulaGruntGroupSize: 8,
+  formulaBaseBombers: 4,
+  formulaBomberEveryWaves: 3,
+  formulaBaseDivers: 5,
+  formulaDiverEveryWaves: 2,
+  spawnSpreadWave16: 24,
+  spawnSpreadWave50: 56,
+  spawnSpreadFreeplayMax: 78,
+  spawnJitter: 1.2,
+  volleyFirstGeneratedRound: 18,
+  volleyGapPattern: [3, 4] as const,
+  freeplayVolleyFirstRound: 52,
+  freeplayVolleyGapPattern: [2, 3] as const,
+  counterforceChance: 0.25,
 } as const;
 
 // GAME-DESIGN.md §11.2 — placement rules
@@ -114,4 +141,3 @@ export const VOLLEY = {
   blastTtl: 1.5, // interceptor blast sphere active window
   proximityInhibitY: 15, // no aiming below this (§6.5)
 } as const;
-

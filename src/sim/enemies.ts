@@ -7,7 +7,7 @@ import { citiesAlive, toast, type Enemy, type GameState, type GruntGroup } from 
 // Grunt swarm behavior (GAME-DESIGN.md §5): loose group dives to the formation
 // band, then meanders organically while sinking. Landing = ground detonation.
 
-export function spawnGruntGroup(state: GameState, count: number): void {
+export function spawnGruntGroup(state: GameState, count: number, hpScale = 1, speedScale = 1): void {
   const def = ENEMY_DEFS.grunt;
   const groupId = state.nextId++;
   const cols = Math.min(count, 5);
@@ -20,6 +20,7 @@ export function spawnGruntGroup(state: GameState, count: number): void {
     anchorZ,
     heading: rand() * Math.PI * 2,
     wanderSeed: rand() * Math.PI * 2,
+    speedScale,
     members: [],
   };
   for (let i = 0; i < count; i++) {
@@ -30,7 +31,7 @@ export function spawnGruntGroup(state: GameState, count: number): void {
     const enemy: Enemy = {
       id: state.nextId++,
       defId: def.id,
-      hp: def.hp,
+      hp: Math.ceil(def.hp * hpScale),
       pos: new THREE.Vector3(anchorX + dx, GRUNT.spawnY, anchorZ + dz),
       alive: true,
       groupId,
@@ -101,10 +102,10 @@ export function updateGroups(state: GameState, dt: number): void {
 
     // descent: fast entry dive, then a slow sink whose rate swells and eases
     if (group.y > GRUNT.formationTop) {
-      group.y = Math.max(GRUNT.formationTop, group.y - GRUNT.entryDiveSpeed * dt);
+      group.y = Math.max(GRUNT.formationTop, group.y - GRUNT.entryDiveSpeed * group.speedScale * dt);
     } else {
       const swell = 1 + GRUNT.sinkSwell * Math.sin(t * 0.4 + group.wanderSeed * 2);
-      group.y -= GRUNT.sinkSpeed * swell * dt;
+      group.y -= GRUNT.sinkSpeed * group.speedScale * swell * dt;
     }
 
     const landed = group.y <= 0;
