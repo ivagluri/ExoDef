@@ -27,8 +27,6 @@ const sync = new RenderSync(world.scene, world.cities);
 const placement = new PlacementInput(renderer.domElement, iso.camera, world.scene, state);
 const coordView = new CoordinateView(world.scene, iso.camera);
 renderer.domElement.addEventListener("pointerdown", (ev) => coordView.onPointerDown(ev, state));
-const radar = createRadar();
-const radarRight = new THREE.Vector3();
 
 const hud = createHud({
   onStart: () => startRound(state),
@@ -43,6 +41,10 @@ const hud = createHud({
   onPriority: () => placement.selectedTowerId !== null && cyclePriority(state, placement.selectedTowerId),
   onBanner: () => coordView.enter(state),
 });
+// AFTER createHud — the HUD build wipes #hud's children, and the radar canvas
+// lives inside #hud (was created first once; drew to a detached canvas forever)
+const radar = createRadar();
+const radarRight = new THREE.Vector3();
 
 // siren on volley start (§6.2) — watch for the sim-side transition
 let volleyWasActive = false;
