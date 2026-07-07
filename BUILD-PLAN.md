@@ -9,7 +9,7 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 1 COMPLETE — Phase 2 is next** (updated 2026-07-07)
+**Status: Phase 2 COMPLETE — Phase 3 is next** (updated 2026-07-07)
 
 ---
 
@@ -26,19 +26,19 @@ The Spectre-style diorama, rotating. No gameplay.
 
 **DoD:** `npm run dev` → browser shows the barren world with 6 cities; camera orbits smoothly; `npm run build` passes with no type errors.
 
-## Phase 2 — TD core loop
+## Phase 2 — TD core loop ✅ (2026-07-07)
 
 Playable tower defense vs grunts, waves 1–4.
 
-- [ ] Data-driven defs: `src/content/towers.ts`, `src/content/enemies.ts` (§4/§5 schemas)
-- [ ] Placement: build bar (hotkeys 1/2), ghost + range dome preview, validity rules (§11.2)
-- [ ] Gun + flak towers: auto-fire, targeting priority (First/Strongest/Closest), pooled projectiles, flak AoE
-- [ ] Grunt behavior: edge spawn in groups, lateral drift + step-down descent, landing detonation (§5)
-- [ ] Damage rules: tower 1 HP, city 2 HP with damaged visual state
-- [ ] Economy: cash, bounties, city income per round (§8)
-- [ ] Round flow: START ROUND button, mid-round building, wave-clear detection, early-start bonus
-- [ ] HUD: cash, city count, round number, score
-- [ ] Waves 1–4 authored (§9)
+- [x] Data-driven defs: `src/content/towers.ts`, `src/content/enemies.ts` (§4/§5 schemas)
+- [x] Placement: build bar (hotkeys 1/2), ghost + range dome preview, validity rules (§11.2)
+- [x] Gun + flak towers: auto-fire, targeting priority (First/Strongest/Closest), tracers/shells, flak AoE
+- [x] Grunt behavior: group spawn at ENTRY, organic meander descent, landing detonation (§5 — movement made organic per user playtest, doc updated)
+- [x] Damage rules: tower 1 HP, city 2 HP with damaged visual state
+- [x] Economy: cash, bounties, city income per round (§8)
+- [x] Round flow: START ROUND button, mid-round building, wave-clear detection, early-start bonus
+- [x] HUD: cash, city count, round number, score, toast, game-over overlay
+- [x] Waves 1–4 authored (§9) — wave 4's bomber deferred to Phase 3 (extra grunts stand in)
 
 **DoD:** user can place guns/flak, start rounds 1–4, kill grunts, earn cash, lose towers/cities to landings.
 
@@ -90,3 +90,4 @@ Driven by user playtests against GAME-DESIGN.md §15's open questions. No new sy
 
 - **2026-07-07** — Design doc completed and approved. Build plan created. Phase 1 started.
 - **2026-07-07** — Phase 1 complete: scaffold, world render, orbit camera, sim loop. `npm run build` clean, dev server verified. Note: Node.js was installed via Homebrew this session (machine had none). Files: `src/{main,balance}.ts`, `src/render/{scene,cameras}.ts`, `src/input/orbit.ts`, `src/sim/state.ts`, `src/ui/hud.ts`. Await user playtest of the diorama before/while starting Phase 2.
+- **2026-07-07** — Phase 2 complete: sim entities + game orchestration (`src/sim/{game,waves,enemies,towers}.ts`), placement input, render sync, full HUD. Headless smoke test added (`npm run smoke`, uses tsx) — run it after sim changes. **User playtest feedback applied:** grunt movement felt rigid (axis-locked Space Invaders march) → replaced with organic meander (wandering heading + continuous swelling sink + per-member bob); GAME-DESIGN.md §5 updated to match. Also: grunts fast-dive from ENTRY to y=100 before meandering (pacing — literal spec meant minutes of dead time). Phase 3 note: wave 4 currently has stand-in grunts where its bomber belongs.

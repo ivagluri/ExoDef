@@ -46,3 +46,51 @@ export const PALETTE = {
 } as const;
 
 export const SIM_HZ = 60; // fixed-timestep simulation rate (GAME-DESIGN.md §13)
+
+// GAME-DESIGN.md §8 — economy [tunable]
+export const ECONOMY = {
+  startingCash: 650,
+  cityIncome: 25, // per surviving city per round
+  earlyStartBonus: 50,
+  earlyStartWindow: 5, // seconds after round clear
+  sellRefund: 0.7,
+} as const;
+
+// GAME-DESIGN.md §3 — score
+export const SCORE = {
+  roundClearPerWave: 100,
+} as const;
+
+// GAME-DESIGN.md §11.2 — placement rules
+export const PLACEMENT = {
+  footprintRadius: 6,
+  minTowerGap: 13, // center-to-center
+  cityClearance: 15,
+  buildableHalf: 92, // |x|,|z| limit for tower centers
+} as const;
+
+// GAME-DESIGN.md §5 — grunt behavior [tunable]
+// Movement went organic per playtest feedback (2026-07-07): meandering heading +
+// continuous swelling descent + per-member bob, replacing the axis-locked
+// drift/step-down march that felt too rigid.
+export const GRUNT = {
+  driftSpeed: 8, // u/s horizontal meander
+  sinkSpeed: 1.3, // u/s average descent below formationTop
+  sinkSwell: 0.5, // descent-rate modulation amplitude
+  wanderTurn: 0.5, // rad/s max serpentine turn rate
+  boundRadius: 80, // steer back toward center beyond this
+  spacing: 9, // formation grid spacing
+  bobAmp: 2.2, // per-member positional wobble (u)
+  bobFreq: 1.1, // per-member wobble frequency (rad/s-ish)
+  spawnY: 150,
+  // Groups dive quickly from ENTRY down to the formation band, then meander.
+  // Without this, reaching tower range takes minutes of dead time. §5 already
+  // says waves "spend most of their descent" in MID.
+  entryDiveSpeed: 18, // u/s while above formationTop
+  formationTop: 100,
+  detonateRadius: 8, // landing blast vs towers/cities
+} as const;
+
+export const CITY_HP = 2; // bomb/landing = 1 hit, warhead = 2 (§8)
+export const CITY_RADIUS = 8; // for hit tests
+

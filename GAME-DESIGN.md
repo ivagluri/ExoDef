@@ -150,7 +150,7 @@ Cities have **2 HP**. Bomb hit = 1, grunt landing = 1, missile warhead = 2 (inst
 
 | Enemy | HP | Bounty | Behavior |
 |---|---|---|---|
-| **Grunt** ▼ | 20 | $8 | Wave filler. Spawns in loose groups of 5–9 at ENTRY over a random map edge. Drifts laterally ~8 u/s as a group, reversing at map bounds; every reversal (or every 12s) the group drops 10 u of altitude — a loose echo of the formation step-down. On reaching y=0: detonates, destroying towers within 8 u and dealing 1 hit to a city within 8 u. |
+| **Grunt** ▼ | 20 | $8 | Wave filler. Spawns in loose groups of 5–9 at ENTRY. The group dives quickly to the formation band (~y=100), then **meanders organically**: anchor wanders on a serpentine heading (steering back when it strays off-map) while sinking continuously with a gentle swell; each member bobs on its own phase. *(Changed from axis-locked drift + discrete step-downs after 2026-07-07 playtest — the literal Space Invaders march read as rigid in 3D.)* On reaching y=0: detonates, destroying towers within 8 u and dealing 1 hit to a city within 8 u. |
 | **Bomber** ◆ | 60 | $25 | Picks a target (city 70% / tower 30%), flies to hover ~30 u above it, drops a bomb every 4s (bomb falls straight down, 1 hit to whatever's beneath, 6 u splash vs towers). Re-targets after destroying its target. The priority kill. |
 | **Diver** ↓ | 15 | $15 | Spawns at HIGH, cruises 3s, then plunges at 40 u/s straight at a random structure. Impact = same as grunt landing. Tests low-altitude reaction coverage. |
 | **Bonus UFO** ◑ | 80 | $150 | Rare (see wave table). Crosses the map at y≈100 (HIGH) at 25 u/s, on screen ~8–10s, harms nothing. Cash piñata — in v1 only T3 flak clips it; it mainly advertises the beam tower expansion. |
