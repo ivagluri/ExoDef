@@ -82,55 +82,78 @@ export function createHud(handlers: {
   `;
 
   const el = (name: string) => hud.querySelector<HTMLElement>(`[data-el="${name}"]`)!;
+
+  // HUD buttons fire on pointerdown, not click: the game canvas acts on
+  // pointerdown, and a click (down+up on the same element) was too easy to
+  // cancel with a 1px drag mid-press (playtest: "buttons take several tries").
+  const press = (element: HTMLElement, handler: () => void) => {
+    element.addEventListener("pointerdown", (ev) => {
+      ev.preventDefault(); // keep focus/selection quirks out of it
+      if (!(element as HTMLButtonElement).disabled) handler();
+    });
+  };
+  // Mutating the DOM only on actual change is the other half of the fix — an
+  // every-frame textContent rewrite can eat a press that straddles the frame.
+  const setText = (element: HTMLElement, text: string) => {
+    if (element.textContent !== text) element.textContent = text;
+  };
+  const setDisplay = (element: HTMLElement, value: string) => {
+    if (element.style.display !== value) element.style.display = value;
+  };
+  const setDisabled = (button: HTMLButtonElement, disabled: boolean) => {
+    if (button.disabled !== disabled) button.disabled = disabled;
+  };
+
   const buildBar = el("build");
   const buttons = new Map<string, HTMLButtonElement>();
   for (const id of BUILDABLE) {
     const def = TOWER_DEFS[id];
     const btn = document.createElement("button");
     btn.textContent = `[${def.hotkey}] ${def.name} $${def.cost}`;
-    btn.addEventListener("click", () => handlers.onSelect(id));
+    press(btn, () => handlers.onSelect(id));
     buildBar.appendChild(btn);
     buttons.set(id, btn);
   }
   const startBtn = el("start") as HTMLButtonElement;
-  startBtn.addEventListener("click", () => handlers.onStart());
-  el("pupgrade").addEventListener("click", () => handlers.onUpgrade());
-  el("psell").addEventListener("click", () => handlers.onSell());
-  el("ppriority").addEventListener("click", () => handlers.onPriority());
+  press(startBtn, () => handlers.onStart());
+  press(el("pupgrade"), () => handlers.onUpgrade());
+  press(el("psell"), () => handlers.onSell());
+  press(el("ppriority"), () => handlers.onPriority());
 
   return {
     update(state: GameState, selection: string | null, selectedTowerId: number | null): void {
-      el("cash").textContent = `$${state.cash}`;
-      el("round").textContent = state.round === 0 ? "PLACE YOUR DEFENSES" : `ROUND ${state.round}`;
-      el("right").textContent = `⌂ ${citiesAlive(state)}/6 · SCORE ${state.score}`;
+      setText(el("cash"), `$${state.cash}`);
+      setText(el("round"), state.round === 0 ? "PLACE YOUR DEFENSES" : `ROUND ${state.round}`);
+      setText(el("right"), `⌂ ${citiesAlive(state)}/6 · SCORE ${state.score}`);
       for (const [id, btn] of buttons) {
         btn.classList.toggle("sel", selection === id);
-        btn.disabled = state.cash < TOWER_DEFS[id].cost && selection !== id;
+        setDisabled(btn, state.cash < TOWER_DEFS[id].cost && selection !== id);
       }
-      startBtn.style.display = state.phase === "build" ? "" : "none";
+      setDisplay(startBtn, state.phase === "build" ? "" : "none");
       const nextMissiles = waveDef(state.round + 1)?.missiles;
-      startBtn.textContent = `▶ START ROUND ${state.round + 1}${nextMissiles ? " ⚠ MISSILES" : ""}`;
+      setText(startBtn, `▶ START ROUND ${state.round + 1}${nextMissiles ? " ⚠ MISSILES" : ""}`);
       const toastEl = el("toast");
-      toastEl.textContent = state.message;
-      toastEl.style.opacity = state.messageTtl > 0 ? "1" : "0";
+      setText(toastEl, state.message);
+      const toastOpacity = state.messageTtl > 0 ? "1" : "0";
+      if (toastEl.style.opacity !== toastOpacity) toastEl.style.opacity = toastOpacity;
 
       // tower panel
       const tower = selectedTowerId !== null ? towerById(state, selectedTowerId) : undefined;
-      el("panel").style.display = tower ? "flex" : "none";
+      setDisplay(el("panel"), tower ? "flex" : "none");
       if (tower) {
         const def = TOWER_DEFS[tower.defId];
-        el("ptitle").textContent = `${def.name} T${tower.tier + 1}`;
+        setText(el("ptitle"), `${def.name} T${tower.tier + 1}`);
         const upBtn = el("pupgrade") as HTMLButtonElement;
         const cost = upgradeCost(tower);
-        upBtn.textContent = cost === null ? "MAX TIER" : `UPGRADE $${cost}`;
-        upBtn.disabled = cost === null || state.cash < cost;
-        el("psell").textContent = `SELL +$${sellRefund(tower)}`;
-        el("ppriority").textContent = `TARGET: ${tower.priority.toUpperCase()}`;
+        setText(upBtn, cost === null ? "MAX TIER" : `UPGRADE $${cost}`);
+        setDisabled(upBtn, cost === null || state.cash < cost);
+        setText(el("psell"), `SELL +$${sellRefund(tower)}`);
+        setText(el("ppriority"), `TARGET: ${tower.priority.toUpperCase()}`);
       }
 
       if (state.phase === "gameover") {
-        el("gameover").style.display = "flex";
-        el("finalscore").textContent = `FINAL SCORE ${state.score} — REACHED ROUND ${state.round}`;
+        setDisplay(el("gameover"), "flex");
+        setText(el("finalscore"), `FINAL SCORE ${state.score} — REACHED ROUND ${state.round}`);
       }
     },
   };

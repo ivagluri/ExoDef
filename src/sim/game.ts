@@ -16,10 +16,6 @@ export function startRound(state: GameState): boolean {
     toast(state, `PHASE 3 CONTENT ENDS AT WAVE ${WAVE_COUNT} — WAVES 16–50 ARRIVE IN PHASE 5`);
     return false;
   }
-  if (state.round > 0 && state.simTime - state.roundClearedAt <= ECONOMY.earlyStartWindow) {
-    state.cash += ECONOMY.earlyStartBonus;
-    toast(state, `QUICK START +$${ECONOMY.earlyStartBonus}`);
-  }
   state.round++;
   state.roundTime = 0;
   state.pending = waveSpawns(state.round);
@@ -51,7 +47,6 @@ function spawnPending(state: GameState): void {
 function checkRoundClear(state: GameState): void {
   if (state.pending.length > 0 || state.enemies.length > 0 || state.bombs.length > 0) return;
   state.phase = "build";
-  state.roundClearedAt = state.simTime;
   const income = citiesAlive(state) * ECONOMY.cityIncome;
   state.cash += income;
   state.score += SCORE.roundClearPerWave * state.round;

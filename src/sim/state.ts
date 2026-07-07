@@ -92,7 +92,6 @@ export interface GameState {
   round: number; // last started round (0 before round 1)
   phase: RoundPhase;
   roundTime: number;
-  roundClearedAt: number;
   pending: PendingSpawn[];
   cities: City[];
   towers: Tower[];
@@ -116,7 +115,6 @@ export function createGameState(): GameState {
     round: 0,
     phase: "build",
     roundTime: 0,
-    roundClearedAt: -Infinity,
     pending: [],
     cities: CITY_POSITIONS.map(([x, z], index) => ({
       index,

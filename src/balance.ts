@@ -51,8 +51,6 @@ export const SIM_HZ = 60; // fixed-timestep simulation rate (GAME-DESIGN.md §13
 export const ECONOMY = {
   startingCash: 650,
   cityIncome: 25, // per surviving city per round
-  earlyStartBonus: 50,
-  earlyStartWindow: 5, // seconds after round clear
   sellRefund: 0.7,
 } as const;
 
