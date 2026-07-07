@@ -10,6 +10,7 @@ import { cyclePriority, sellTower, upgradeTower } from "./sim/actions";
 import { simTick, startRound } from "./sim/game";
 import { createGameState } from "./sim/state";
 import { createHud } from "./ui/hud";
+import { createRadar } from "./ui/radar";
 import { siren } from "./ui/siren";
 
 const app = document.getElementById("app")!;
@@ -26,6 +27,8 @@ const sync = new RenderSync(world.scene, world.cities);
 const placement = new PlacementInput(renderer.domElement, iso.camera, world.scene, state);
 const coordView = new CoordinateView(world.scene, iso.camera);
 renderer.domElement.addEventListener("pointerdown", (ev) => coordView.onPointerDown(ev, state));
+const radar = createRadar();
+const radarRight = new THREE.Vector3();
 
 const hud = createHud({
   onStart: () => startRound(state),
@@ -92,6 +95,13 @@ function frame(now: number): void {
 
   sync.sync(state);
   hud.update(state, placement.selection, placement.selectedTowerId, coordView.hudInfo(state));
+
+  // radar lateral axis: volley frame in coordinate view, else screen-right
+  const frameRight = coordView.lateralRight();
+  if (frameRight) radarRight.copy(frameRight);
+  else radarRight.setFromMatrixColumn(iso.camera.matrixWorld, 0).setY(0).normalize();
+  radar.draw(state, radarRight);
+
   if (coordView.isMapMode()) renderer.render(world.scene, iso.camera);
   else coordView.render(renderer, world.scene);
 }

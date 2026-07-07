@@ -88,6 +88,12 @@ export class CoordinateView {
     return this.mode === "map";
   }
 
+  /** Radar lateral axis (§11.4): the volley frame's right while this view is
+   *  active; null in map mode (radar then follows the orbit camera). */
+  lateralRight(): THREE.Vector3 | null {
+    return this.mode === "map" ? null : this.right;
+  }
+
   toggle(state: GameState): void {
     if (this.mode === "map" || this.mode === "exiting") {
       if (state.volley) this.enter(state);
