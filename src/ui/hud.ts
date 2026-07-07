@@ -1,6 +1,7 @@
 import { BUILDABLE, TOWER_DEFS } from "../content/towers";
+import type { CoordHudInfo } from "../render/coordview";
 import { sellRefund, towerById, upgradeCost } from "../sim/actions";
-import { inboundCount } from "../sim/missiles";
+import { aliveBatteries, batteryTier, inboundCount } from "../sim/missiles";
 import { citiesAlive, type GameState } from "../sim/state";
 import { waveDef } from "../sim/waves";
 
@@ -8,7 +9,7 @@ import { waveDef } from "../sim/waves";
 // toast, tower panel (upgrade/sell/priority), game-over overlay.
 
 export interface Hud {
-  update(state: GameState, selection: string | null, selectedTowerId: number | null): void;
+  update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo): void;
 }
 
 export function createHud(handlers: {
@@ -62,6 +63,20 @@ export function createHud(handlers: {
       }
       #hud .alert small { font-size: 11px; letter-spacing: 0.1em; color: #ff8a8a; opacity: 0.8; }
       @keyframes alertpulse { 50% { border-color: #ffb0b0; } }
+      #hud .coordbar {
+        position: absolute; top: 0; left: 0; right: 0; display: none;
+        justify-content: center; gap: 26px; padding: 9px 12px;
+        font-size: 13px; letter-spacing: 0.1em; color: #9fe8ee;
+        background: #0a1224cc; border-bottom: 1px solid #35e0e844;
+      }
+      #hud .coorddiv {
+        position: absolute; top: 70%; left: 0; right: 0; height: 2px;
+        background: #35e0e855; display: none;
+      }
+      /* coordinate view: map chrome yields to the §11.3 HUD */
+      #hud.coord .bar, #hud.coord .alert, #hud.coord .panel { display: none !important; }
+      #hud.coord .coordbar { display: flex; }
+      #hud.coord .coorddiv { display: block; }
       #hud .tag { position: absolute; left: 12px; bottom: 54px; font-size: 11px; opacity: 0.45; }
       #hud .panel {
         position: absolute; right: 14px; bottom: 60px; display: flex;
@@ -84,6 +99,8 @@ export function createHud(handlers: {
       <button data-el="alertbtn">⚠ MISSILE LAUNCH ⚠</button>
       <small>[TAB] OR CLICK TO INTERCEPT</small>
     </div>
+    <div class="coordbar" data-el="coordbar"></div>
+    <div class="coorddiv"></div>
     <div class="panel" data-el="panel" style="display:none">
       <div data-el="ptitle" style="letter-spacing:0.1em"></div>
       <button data-el="pupgrade"></button>
@@ -139,7 +156,22 @@ export function createHud(handlers: {
   press(el("alertbtn"), () => handlers.onBanner());
 
   return {
-    update(state: GameState, selection: string | null, selectedTowerId: number | null): void {
+    update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo): void {
+      hud.classList.toggle("coord", coord.active);
+      if (coord.active) {
+        // §11.3: ammo pips, auto-pick flight time, inbound count, scheme
+        const pips = aliveBatteries(state).map((b, i) => {
+          const bs = b.battery!;
+          const cap = batteryTier(b).ammoPerVolley;
+          const state_ = bs.reloadLeft > 0 ? " RELOADING" : "";
+          return `◈${i + 1} ${"▪".repeat(bs.ammo)}${"▫".repeat(Math.max(0, cap - bs.ammo))}${state_}`;
+        }).join("  ");
+        const flight = coord.previewSeconds !== null ? `FLIGHT ${coord.previewSeconds.toFixed(1)}s` : "NO BATTERY READY";
+        const scheme = coord.scheme === "plotted"
+          ? `[F] PLOTTED SHOT — SIDE ${coord.needSide ? "○" : "●"} TOP ${coord.needTop ? "○" : "●"}`
+          : "[F] PLOT+COMMIT — [SPACE] FIRES";
+        setText(el("coordbar"), `⚠ ${inboundCount(state)} INBOUND  ·  ${pips || "NO BATTERIES"}  ·  ${flight}  ·  ${scheme}  ·  [TAB] MAP`);
+      }
       setText(el("cash"), `$${state.cash}`);
       setText(el("round"), state.round === 0 ? "PLACE YOUR DEFENSES" : `ROUND ${state.round}`);
       setText(el("right"), `⌂ ${citiesAlive(state)}/6 · SCORE ${state.score}`);

@@ -11,6 +11,8 @@ import { toast, type GameState, type Tower } from "../sim/state";
 export class PlacementInput {
   selection: string | null = null;
   selectedTowerId: number | null = null;
+  /** false while the coordinate view owns clicks (aiming, not placing) */
+  enabled = true;
   private ghost: { object: THREE.Group; setValid: (v: boolean) => void } | null = null;
   private dome: THREE.Mesh | null = null;
   private groundPoint = new THREE.Vector3();
@@ -107,7 +109,7 @@ export class PlacementInput {
   }
 
   private click(): void {
-    if (!this.pointerOnGround || this.state.phase === "gameover") return;
+    if (!this.enabled || !this.pointerOnGround || this.state.phase === "gameover") return;
 
     if (this.selection) {
       const def = TOWER_DEFS[this.selection];
