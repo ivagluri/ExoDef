@@ -9,7 +9,6 @@ import { toast, type GameState } from "../sim/state";
 // crosshair C = (u, v, y); each viewport's click sets its two axes. The sim
 // never pauses in here; that's the whole point.
 
-export type FireScheme = "plotted" | "commit";
 type Mode = "map" | "entering" | "coord" | "exiting";
 
 const TRANSITION = 0.6; // §6.2 camera swing
@@ -23,15 +22,13 @@ const V_BACK = 165; // approach-side extent (covers entryOffset + jitter)
 const V_FRONT = 115; // far-side extent
 export interface CoordHudInfo {
   active: boolean;
-  scheme: FireScheme;
   previewSeconds: number | null;
-  needSide: boolean; // scheme A: which views still need a fresh click
+  needSide: boolean; // which views still need a fresh click
   needTop: boolean;
 }
 
 export class CoordinateView {
   mode: Mode = "map";
-  scheme: FireScheme;
 
   private fwd = new THREE.Vector3(1, 0, 0); // volley frame (§7.1)
   private right = new THREE.Vector3(0, 0, 1);
@@ -59,10 +56,7 @@ export class CoordinateView {
   constructor(
     scene: THREE.Scene,
     private isoCam: THREE.PerspectiveCamera,
-    scheme: FireScheme,
   ) {
-    this.scheme = scheme;
-
     const mat = new THREE.LineBasicMaterial({ color: 0xe8fdff, depthTest: false });
     this.crosshair = new THREE.Group();
     const arm = 7;
@@ -146,16 +140,6 @@ export class CoordinateView {
     this.t = 0;
   }
 
-  toggleScheme(): FireScheme {
-    this.setScheme(this.scheme === "plotted" ? "commit" : "plotted");
-    return this.scheme;
-  }
-
-  setScheme(scheme: FireScheme): void {
-    this.scheme = scheme;
-    this.freshSide = this.freshTop = false;
-  }
-
   crosshairWorld(out = new THREE.Vector3()): THREE.Vector3 {
     return out
       .set(0, 0, 0)
@@ -218,16 +202,11 @@ export class CoordinateView {
       this.C.v = THREE.MathUtils.clamp(p.dot(this.fwd), -V_BACK, V_FRONT);
       this.freshTop = true;
     }
-    if (this.scheme === "plotted" && this.freshSide && this.freshTop) {
+    if (this.freshSide && this.freshTop) {
       this.fire(state);
       this.freshSide = this.freshTop = false;
     }
     return true;
-  }
-
-  /** SPACE in scheme B (§6.4). */
-  onCommit(state: GameState): void {
-    if (this.mode === "coord" && this.scheme === "commit") this.fire(state);
   }
 
   private fire(state: GameState): void {
@@ -238,10 +217,9 @@ export class CoordinateView {
     void state;
     return {
       active: this.mode === "coord",
-      scheme: this.scheme,
       previewSeconds: this.previewSeconds,
-      needSide: this.scheme === "plotted" && !this.freshSide,
-      needTop: this.scheme === "plotted" && !this.freshTop,
+      needSide: !this.freshSide,
+      needTop: !this.freshTop,
     };
   }
 

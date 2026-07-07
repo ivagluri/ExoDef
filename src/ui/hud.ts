@@ -1,6 +1,6 @@
 import { WAVE_GOAL } from "../balance";
 import { BUILDABLE, TOWER_DEFS, type TowerTier } from "../content/towers";
-import type { CoordHudInfo, FireScheme } from "../render/coordview";
+import type { CoordHudInfo } from "../render/coordview";
 import { sellRefund, towerById, upgradeCost } from "../sim/actions";
 import { aliveBatteries, batteryTier, inboundCount } from "../sim/missiles";
 import { coresAlive, type GameState } from "../sim/state";
@@ -15,7 +15,6 @@ export interface Hud {
 
 export interface HudSettings {
   open: boolean;
-  fireScheme: FireScheme;
   simSpeed: number;
   volume: number;
   highScore: number;
@@ -30,7 +29,6 @@ export function createHud(handlers: {
   onBanner: () => void;
   onSpeed: () => void;
   onSettings: () => void;
-  onFireScheme: (scheme: FireScheme) => void;
   onSpeedValue: (speed: number) => void;
   onVolume: (volume: number) => void;
   onTestMissiles: () => void;
@@ -161,13 +159,6 @@ export function createHud(handlers: {
     </div>
     <div class="settingspanel" data-el="settingspanel">
       <div class="settingrow">
-        <span>FIRE</span>
-        <span class="seg">
-          <button data-el="schemePlotted">PLOTTED</button>
-          <button data-el="schemeCommit">COMMIT</button>
-        </span>
-      </div>
-      <div class="settingrow">
         <span>SPEED</span>
         <span class="seg">
           <button data-el="speed1">1×</button>
@@ -241,8 +232,6 @@ export function createHud(handlers: {
   press(el("alertbtn"), () => handlers.onBanner());
   press(el("speed"), () => handlers.onSpeed());
   press(el("settings"), () => handlers.onSettings());
-  press(el("schemePlotted"), () => handlers.onFireScheme("plotted"));
-  press(el("schemeCommit"), () => handlers.onFireScheme("commit"));
   press(el("speed1"), () => handlers.onSpeedValue(1));
   press(el("speed3"), () => handlers.onSpeedValue(3));
   press(el("testMissiles"), () => handlers.onTestMissiles());
@@ -257,10 +246,6 @@ export function createHud(handlers: {
       speedBtn.classList.toggle("sel", settings.simSpeed > 1);
       setText(speedBtn, settings.simSpeed > 1 ? `▶▶ ${settings.simSpeed}× ON` : "▶▶ 3×");
       setDisplay(el("settingspanel"), settings.open ? "flex" : "none");
-      const plottedBtn = el("schemePlotted") as HTMLButtonElement;
-      const commitBtn = el("schemeCommit") as HTMLButtonElement;
-      plottedBtn.classList.toggle("sel", settings.fireScheme === "plotted");
-      commitBtn.classList.toggle("sel", settings.fireScheme === "commit");
       (el("speed1") as HTMLButtonElement).classList.toggle("sel", settings.simSpeed === 1);
       (el("speed3") as HTMLButtonElement).classList.toggle("sel", settings.simSpeed === 3);
       const volumeValue = String(Math.round(settings.volume * 100));
@@ -269,7 +254,7 @@ export function createHud(handlers: {
       setDisabled(el("testBoss") as HTMLButtonElement, state.phase === "gameover");
       const bestScore = Math.max(settings.highScore ?? 0, state.score);
       if (coord.active) {
-        // §11.3: ammo pips, auto-pick flight time, inbound count, scheme
+        // §11.3: ammo pips, auto-pick flight time, inbound count, click-pair readiness
         const pips = aliveBatteries(state).map((b, i) => {
           const bs = b.battery!;
           const cap = batteryTier(b).ammoPerVolley;
@@ -277,10 +262,8 @@ export function createHud(handlers: {
           return `◈${i + 1} ${"▪".repeat(bs.ammo)}${"▫".repeat(Math.max(0, cap - bs.ammo))}${state_}`;
         }).join("  ");
         const flight = coord.previewSeconds !== null ? `FLIGHT ${coord.previewSeconds.toFixed(1)}s` : "NO BATTERY READY";
-        const scheme = coord.scheme === "plotted"
-          ? `[F] PLOTTED SHOT — SIDE ${coord.needSide ? "○" : "●"} TOP ${coord.needTop ? "○" : "●"}`
-          : "[F] PLOT+COMMIT — [SPACE] FIRES";
-        setText(el("coordbar"), `⚠ ${inboundCount(state)} INBOUND  ·  ${pips || "NO BATTERIES"}  ·  ${flight}  ·  ${scheme}  ·  [TAB] MAP`);
+        const plot = `SHOT — SIDE ${coord.needSide ? "○" : "●"} TOP ${coord.needTop ? "○" : "●"}`;
+        setText(el("coordbar"), `⚠ ${inboundCount(state)} INBOUND  ·  ${pips || "NO BATTERIES"}  ·  ${flight}  ·  ${plot}  ·  [TAB] MAP`);
       }
       setText(el("cash"), `$${state.cash}`);
       setText(el("round"), state.round === 0 ? "PLACE YOUR DEFENSES" : `ROUND ${state.round}`);

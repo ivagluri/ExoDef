@@ -220,19 +220,20 @@ The **volley-aligned frame**: right = lateral **u**, forward (toward camera dept
 
 ### 6.4 Aiming — two inputs, full 3D, no assists
 
-One shared 3D crosshair point **C = (u, v, y)**. A click in a viewport sets that viewport's two axes of C (side click sets u & y; top click sets u & v; the shared lateral axis u: **last click wins**). Ghost crosshair in the other viewport mirrors C live, so the full 3D point is always visible before commitment.
+One shared 3D crosshair point **C = (u, v, y)**. A click in a viewport sets that viewport's two axes of C (side click sets u & y; top click sets u & v; the shared lateral axis u: **last click wins**). Ghost crosshair in the other viewport mirrors C live, so the full 3D point is always visible before firing.
 
-Two firing schemes, **toggleable in settings** (playtest picks the default, §15):
+Firing uses the plotted two-click flow:
 
-- **Scheme A — Plotted shot:** a shot requires a *fresh* click in each view (either order). The second click fires immediately at C and resets both "fresh" flags. 2 clicks = 1 shot, always.
-- **Scheme B — Plot + commit:** clicks only move C (adjust as often as you like); **SPACE** fires at current C. Repeated SPACE re-fires at the same point (reload permitting).
+- A shot requires a *fresh* click in each view (either order).
+- The second fresh click fires immediately at C and resets both "fresh" flags.
+- 2 clicks = 1 shot, always.
+- The removed plot+commit/SPACE scheme was cut after playtest: base-speed gameplay is too quick for a separate confirm step, while the multi-pane click flow becomes smooth once learned.
 
 State machines:
 
 ```
-Scheme A:  IDLE ──click view X──► HALF(X) ──click view Y≠X──► FIRE → IDLE
-                                  HALF(X) ──click view X────► HALF(X) (re-aim)
-Scheme B:  clicks: C ← merge(C, click)     SPACE: if batteryReady → FIRE at C
+IDLE ──click view X──► HALF(X) ──click view Y≠X──► FIRE → IDLE
+                         HALF(X) ──click view X────► HALF(X) (re-aim)
 ```
 
 ### 6.5 Batteries & interceptors
@@ -387,8 +388,7 @@ HP × `1.06^(wave−50)`, counts +10%/wave, volley every 2–3 waves, warhead ca
 
 | Input | Action |
 |---|---|
-| Left click | Map: select / place / upgrade UI. Coordinate view: aim (per scheme §6.4) |
-| SPACE | Scheme B fire (unused in scheme A) |
+| Left click | Map: select / place / upgrade UI. Coordinate view: aim/fire via side+top plotted clicks (§6.4) |
 | TAB | Toggle map ⇄ coordinate view (only while a volley is active) |
 | Q / E, or right-drag | Orbit map camera |
 | Scroll | Zoom step |
@@ -428,7 +428,7 @@ Gamepad: out of scope v1 (backlog §14).
 
 ### 11.3 Coordinate-view HUD
 
-Per §6.3 wireframe, plus: per-battery ammo pips (`◈₁ ▪▪▪▪▫▫  ◈₂ ▪▪ RELOADING`), auto-pick preview line with flight time, warhead count remaining, scheme indicator (`PLOTTED SHOT` / `PLOT+COMMIT`), and the persistent radar overlay (§11.4), which supersedes the earlier "thin map-status strip" idea as the glanceable ground-war readout (the full peek still costs a TAB).
+Per §6.3 wireframe, plus: per-battery ammo pips (`◈₁ ▪▪▪▪▫▫  ◈₂ ▪▪ RELOADING`), auto-pick preview line with flight time, warhead count remaining, plotted-shot side/top readiness, and the persistent radar overlay (§11.4), which supersedes the earlier "thin map-status strip" idea as the glanceable ground-war readout (the full peek still costs a TAB).
 
 ### 11.4 Radar overlay (persistent) — added 2026-07-07 playtest review
 
@@ -493,7 +493,7 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 
 ## 14. v1 scope cut-line & expansion backlog
 
-**v1 (first playable) includes:** the one map, 3 towers with tiers, 4 enemies, missile volleys with both input schemes + settings toggle, dual-view interception, waves 1–15 authored + formula to 50 + freeplay, full damage/economy model, Spectre art pass, audio cues, local high score.
+**v1 (first playable) includes:** the one map, 3 towers with tiers, 4 enemies, missile volleys with plotted side+top click interception, dual-view interception, waves 1–15 authored + formula to 50 + freeplay, full damage/economy model, Spectre art pass, audio cues, local high score.
 
 **Backlog (explicitly NOT v1):**
 - Beam tower (high-alt sniper, the UFO answer) & Radar tower (+range aura, +grace seconds, volley detail preview) — first additions, schemas already support them
@@ -520,7 +520,7 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 
 ## 15. Open questions → answer via playtest
 
-1. **Default fire scheme:** A (plotted shot) vs B (plot + commit). Ship both, watch which the user keeps.
+1. ~~**Default fire scheme:** A (plotted shot) vs B (plot + commit).~~ **Answered 2026-07-07:** plotted side+top click stays; plot+commit/SPACE was too slow for live gameplay and has been removed.
 2. **Volley density & pace:** warhead count curve, 30s flight time, 8s grace — tune until volleys are tense but plottable.
 3. ~~**The peek problem:** is TAB-peeking at the map mid-volley enough, or does the coordinate view need the thin map-status strip upgraded to a mini radar?~~ **Answered 2026-07-07:** yes — and further: the radar is a persistent overlay in *both* views (§11.4), because altitude is hard to read at the fixed pitch at all times, not just during volleys.
 4. **Difficulty numbers:** everything marked [tunable], especially economy pacing around wave 5 (first volley must be survivable with the free battery alone). 2026-07-07 playtest inputs for the Phase 6 pass: economy too generous overall; stronger-enemy volume too low as stages progress (big grunt swarms stay too easy — composition vs. strength vs. economy lever undecided).

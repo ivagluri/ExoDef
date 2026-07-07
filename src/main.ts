@@ -3,7 +3,7 @@ import { SIM_HZ } from "./balance";
 import { OrbitInput } from "./input/orbit";
 import { PlacementInput } from "./input/placement";
 import { IsoCamera } from "./render/cameras";
-import { CoordinateView, type FireScheme } from "./render/coordview";
+import { CoordinateView } from "./render/coordview";
 import { createWorld } from "./render/scene";
 import { RenderSync } from "./render/sync";
 import { cyclePriority, sellTower, upgradeTower } from "./sim/actions";
@@ -17,7 +17,6 @@ const SETTINGS_KEY = "exodef.settings";
 const HIGH_SCORE_KEY = "exodef.highScore";
 
 interface StoredSettings {
-  fireScheme: FireScheme;
   volume: number;
 }
 
@@ -26,11 +25,10 @@ function loadSettings(): StoredSettings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     const parsed = raw ? JSON.parse(raw) as Partial<StoredSettings> : {};
     return {
-      fireScheme: parsed.fireScheme === "commit" ? "commit" : "plotted",
       volume: typeof parsed.volume === "number" ? Math.max(0, Math.min(1, parsed.volume)) : 0.7,
     };
   } catch {
-    return { fireScheme: "plotted", volume: 0.7 };
+    return { volume: 0.7 };
   }
 }
 
@@ -54,17 +52,11 @@ const placement = new PlacementInput(renderer.domElement, iso.camera, world.scen
 const settings = { ...loadSettings(), open: false };
 let highScore = loadHighScore();
 const audio = new AudioSystem(settings.volume);
-const coordView = new CoordinateView(world.scene, iso.camera, settings.fireScheme);
+const coordView = new CoordinateView(world.scene, iso.camera);
 renderer.domElement.addEventListener("pointerdown", (ev) => coordView.onPointerDown(ev, state));
 
 function saveSettings(): void {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify({ fireScheme: settings.fireScheme, volume: settings.volume }));
-}
-
-function setFireScheme(scheme: FireScheme): void {
-  settings.fireScheme = scheme;
-  coordView.setScheme(scheme);
-  saveSettings();
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify({ volume: settings.volume }));
 }
 
 function setVolume(volume: number): void {
@@ -114,10 +106,6 @@ const hud = createHud({
   onSettings: () => {
     audio.unlock();
     settings.open = !settings.open;
-  },
-  onFireScheme: (scheme) => {
-    audio.unlock();
-    setFireScheme(scheme);
   },
   onSpeedValue: (speed) => {
     audio.unlock();
@@ -217,17 +205,12 @@ function pruneObjectSet<T extends object>(set: Set<T>, live: T[]): void {
 }
 
 window.addEventListener("keydown", (ev) => {
-  if (["Enter", "Tab", "Space", "KeyF", "KeyX"].includes(ev.code)) audio.unlock();
+  if (["Enter", "Tab", "KeyX"].includes(ev.code)) audio.unlock();
   if (ev.code === "Enter") startRound(state);
   if (ev.code === "Tab") {
     ev.preventDefault(); // TAB toggles views (§10), never moves browser focus
     coordView.toggle(state);
   }
-  if (ev.code === "Space") {
-    if (!coordView.isMapMode()) ev.preventDefault();
-    coordView.onCommit(state);
-  }
-  if (ev.code === "KeyF" && !coordView.isMapMode()) setFireScheme(coordView.toggleScheme());
   if (ev.code === "KeyX") toggleSpeed();
 });
 
@@ -273,7 +256,6 @@ function frame(now: number): void {
   sync.sync(state);
   hud.update(state, placement.selection, placement.selectedTowerId, coordView.hudInfo(state), {
     open: settings.open,
-    fireScheme: settings.fireScheme,
     simSpeed,
     volume: settings.volume,
     highScore,
