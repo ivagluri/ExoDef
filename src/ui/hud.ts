@@ -1,6 +1,6 @@
 import { WAVE_GOAL } from "../balance";
 import { BUILDABLE, TOWER_DEFS } from "../content/towers";
-import type { CoordHudInfo } from "../render/coordview";
+import type { CoordHudInfo, FireScheme } from "../render/coordview";
 import { sellRefund, towerById, upgradeCost } from "../sim/actions";
 import { aliveBatteries, batteryTier, inboundCount } from "../sim/missiles";
 import { citiesAlive, type GameState } from "../sim/state";
@@ -10,7 +10,14 @@ import { waveDef } from "../sim/waves";
 // toast, tower panel (upgrade/sell/priority), game-over overlay.
 
 export interface Hud {
-  update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo, simSpeed: number): void;
+  update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo, settings: HudSettings): void;
+}
+
+export interface HudSettings {
+  open: boolean;
+  fireScheme: FireScheme;
+  simSpeed: number;
+  volume: number;
 }
 
 export function createHud(handlers: {
@@ -21,6 +28,10 @@ export function createHud(handlers: {
   onPriority: () => void;
   onBanner: () => void;
   onSpeed: () => void;
+  onSettings: () => void;
+  onFireScheme: (scheme: FireScheme) => void;
+  onSpeedValue: (speed: number) => void;
+  onVolume: (volume: number) => void;
 }): Hud {
   const hud = document.getElementById("hud")!;
   hud.innerHTML = `
@@ -96,6 +107,17 @@ export function createHud(handlers: {
         background: #141b31d9; border: 1px solid #3a4568; border-radius: 6px;
         font-size: 13px;
       }
+      #hud .settingspanel {
+        position: absolute; right: 14px; bottom: 112px; display: none;
+        flex-direction: column; gap: 8px; padding: 10px 12px; min-width: 230px;
+        background: #141b31e8; border: 1px solid #3a4568; border-radius: 6px;
+        font-size: 12px; letter-spacing: 0.06em; pointer-events: auto;
+      }
+      #hud.coord .settingspanel { display: none !important; }
+      #hud .settingrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      #hud .seg { display: flex; gap: 4px; }
+      #hud .seg button { padding: 5px 8px; font-size: 11px; }
+      #hud input[type="range"] { width: 118px; accent-color: #35e0e8; }
     </style>
     <div class="bar top">
       <span data-el="cash"></span>
@@ -106,6 +128,7 @@ export function createHud(handlers: {
       <div class="build" data-el="build"></div>
       <div class="build">
         <button data-el="speed" title="fast-forward [X]">▶▶ 3×</button>
+        <button data-el="settings" title="settings">⚙</button>
         <button class="start" data-el="start">▶ START ROUND 1</button>
       </div>
     </div>
@@ -121,6 +144,26 @@ export function createHud(handlers: {
       <button data-el="pupgrade"></button>
       <button data-el="psell"></button>
       <button data-el="ppriority"></button>
+    </div>
+    <div class="settingspanel" data-el="settingspanel">
+      <div class="settingrow">
+        <span>FIRE</span>
+        <span class="seg">
+          <button data-el="schemePlotted">PLOTTED</button>
+          <button data-el="schemeCommit">COMMIT</button>
+        </span>
+      </div>
+      <div class="settingrow">
+        <span>SPEED</span>
+        <span class="seg">
+          <button data-el="speed1">1×</button>
+          <button data-el="speed3">3×</button>
+        </span>
+      </div>
+      <div class="settingrow">
+        <span>VOLUME</span>
+        <input data-el="volume" type="range" min="0" max="100" step="1" />
+      </div>
     </div>
     <div class="gameover" data-el="gameover">
       ALL CITIES LOST
@@ -175,13 +218,29 @@ export function createHud(handlers: {
   press(el("ppriority"), () => handlers.onPriority());
   press(el("alertbtn"), () => handlers.onBanner());
   press(el("speed"), () => handlers.onSpeed());
+  press(el("settings"), () => handlers.onSettings());
+  press(el("schemePlotted"), () => handlers.onFireScheme("plotted"));
+  press(el("schemeCommit"), () => handlers.onFireScheme("commit"));
+  press(el("speed1"), () => handlers.onSpeedValue(1));
+  press(el("speed3"), () => handlers.onSpeedValue(3));
+  const volumeInput = el("volume") as HTMLInputElement;
+  volumeInput.addEventListener("input", () => handlers.onVolume(Number(volumeInput.value) / 100));
 
   return {
-    update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo, simSpeed: number): void {
+    update(state: GameState, selection: string | null, selectedTowerId: number | null, coord: CoordHudInfo, settings: HudSettings): void {
       hud.classList.toggle("coord", coord.active);
       const speedBtn = el("speed") as HTMLButtonElement;
-      speedBtn.classList.toggle("sel", simSpeed > 1);
-      setText(speedBtn, simSpeed > 1 ? `▶▶ ${simSpeed}× ON` : "▶▶ 3×");
+      speedBtn.classList.toggle("sel", settings.simSpeed > 1);
+      setText(speedBtn, settings.simSpeed > 1 ? `▶▶ ${settings.simSpeed}× ON` : "▶▶ 3×");
+      setDisplay(el("settingspanel"), settings.open ? "flex" : "none");
+      const plottedBtn = el("schemePlotted") as HTMLButtonElement;
+      const commitBtn = el("schemeCommit") as HTMLButtonElement;
+      plottedBtn.classList.toggle("sel", settings.fireScheme === "plotted");
+      commitBtn.classList.toggle("sel", settings.fireScheme === "commit");
+      (el("speed1") as HTMLButtonElement).classList.toggle("sel", settings.simSpeed === 1);
+      (el("speed3") as HTMLButtonElement).classList.toggle("sel", settings.simSpeed === 3);
+      const volumeValue = String(Math.round(settings.volume * 100));
+      if (volumeInput.value !== volumeValue) volumeInput.value = volumeValue;
       if (coord.active) {
         // §11.3: ammo pips, auto-pick flight time, inbound count, scheme
         const pips = aliveBatteries(state).map((b, i) => {

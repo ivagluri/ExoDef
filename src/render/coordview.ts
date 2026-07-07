@@ -21,8 +21,6 @@ const Y_HALF = 90;
 // platform plus a little overage on the far side.
 const V_BACK = 165; // approach-side extent (covers entryOffset + jitter)
 const V_FRONT = 115; // far-side extent
-const SCHEME_KEY = "exodef.fireScheme";
-
 export interface CoordHudInfo {
   active: boolean;
   scheme: FireScheme;
@@ -61,8 +59,9 @@ export class CoordinateView {
   constructor(
     scene: THREE.Scene,
     private isoCam: THREE.PerspectiveCamera,
+    scheme: FireScheme,
   ) {
-    this.scheme = localStorage.getItem(SCHEME_KEY) === "commit" ? "commit" : "plotted";
+    this.scheme = scheme;
 
     const mat = new THREE.LineBasicMaterial({ color: 0x35e0e8 });
     this.crosshair = new THREE.Group();
@@ -147,10 +146,14 @@ export class CoordinateView {
     this.t = 0;
   }
 
-  toggleScheme(): void {
-    this.scheme = this.scheme === "plotted" ? "commit" : "plotted";
+  toggleScheme(): FireScheme {
+    this.setScheme(this.scheme === "plotted" ? "commit" : "plotted");
+    return this.scheme;
+  }
+
+  setScheme(scheme: FireScheme): void {
+    this.scheme = scheme;
     this.freshSide = this.freshTop = false;
-    localStorage.setItem(SCHEME_KEY, this.scheme);
   }
 
   crosshairWorld(out = new THREE.Vector3()): THREE.Vector3 {

@@ -3,15 +3,35 @@ import { SIM_HZ } from "./balance";
 import { OrbitInput } from "./input/orbit";
 import { PlacementInput } from "./input/placement";
 import { IsoCamera } from "./render/cameras";
-import { CoordinateView } from "./render/coordview";
+import { CoordinateView, type FireScheme } from "./render/coordview";
 import { createWorld } from "./render/scene";
 import { RenderSync } from "./render/sync";
 import { cyclePriority, sellTower, upgradeTower } from "./sim/actions";
 import { simTick, startRound } from "./sim/game";
-import { createGameState } from "./sim/state";
+import { citiesAlive, createGameState } from "./sim/state";
 import { createHud } from "./ui/hud";
 import { createRadar } from "./ui/radar";
-import { siren } from "./ui/siren";
+import { AudioSystem } from "./ui/siren";
+
+const SETTINGS_KEY = "exodef.settings";
+
+interface StoredSettings {
+  fireScheme: FireScheme;
+  volume: number;
+}
+
+function loadSettings(): StoredSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) as Partial<StoredSettings> : {};
+    return {
+      fireScheme: parsed.fireScheme === "commit" ? "commit" : "plotted",
+      volume: typeof parsed.volume === "number" ? Math.max(0, Math.min(1, parsed.volume)) : 0.7,
+    };
+  } catch {
+    return { fireScheme: "plotted", volume: 0.7 };
+  }
+}
 
 const app = document.getElementById("app")!;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -25,22 +45,75 @@ const orbit = new OrbitInput(renderer.domElement, iso);
 const state = createGameState();
 const sync = new RenderSync(world.scene, world.cities);
 const placement = new PlacementInput(renderer.domElement, iso.camera, world.scene, state);
-const coordView = new CoordinateView(world.scene, iso.camera);
+const settings = { ...loadSettings(), open: false };
+const audio = new AudioSystem(settings.volume);
+const coordView = new CoordinateView(world.scene, iso.camera, settings.fireScheme);
 renderer.domElement.addEventListener("pointerdown", (ev) => coordView.onPointerDown(ev, state));
 
+function saveSettings(): void {
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify({ fireScheme: settings.fireScheme, volume: settings.volume }));
+}
+
+function setFireScheme(scheme: FireScheme): void {
+  settings.fireScheme = scheme;
+  coordView.setScheme(scheme);
+  saveSettings();
+}
+
+function setVolume(volume: number): void {
+  settings.volume = Math.max(0, Math.min(1, volume));
+  audio.setVolume(settings.volume);
+  saveSettings();
+}
+
 const hud = createHud({
-  onStart: () => startRound(state),
-  onSelect: (id) => placement.select(placement.selection === id ? null : id),
-  onUpgrade: () => placement.selectedTowerId !== null && upgradeTower(state, placement.selectedTowerId),
+  onStart: () => {
+    audio.unlock();
+    startRound(state);
+  },
+  onSelect: (id) => {
+    audio.unlock();
+    placement.select(placement.selection === id ? null : id);
+  },
+  onUpgrade: () => {
+    audio.unlock();
+    if (placement.selectedTowerId !== null) upgradeTower(state, placement.selectedTowerId);
+  },
   onSell: () => {
+    audio.unlock();
     if (placement.selectedTowerId !== null) {
       sellTower(state, placement.selectedTowerId);
       placement.selectedTowerId = null;
     }
   },
-  onPriority: () => placement.selectedTowerId !== null && cyclePriority(state, placement.selectedTowerId),
-  onBanner: () => coordView.enter(state),
-  onSpeed: () => toggleSpeed(),
+  onPriority: () => {
+    audio.unlock();
+    if (placement.selectedTowerId !== null) cyclePriority(state, placement.selectedTowerId);
+  },
+  onBanner: () => {
+    audio.unlock();
+    coordView.enter(state);
+  },
+  onSpeed: () => {
+    audio.unlock();
+    toggleSpeed();
+  },
+  onSettings: () => {
+    audio.unlock();
+    settings.open = !settings.open;
+  },
+  onFireScheme: (scheme) => {
+    audio.unlock();
+    setFireScheme(scheme);
+  },
+  onSpeedValue: (speed) => {
+    audio.unlock();
+    simSpeed = speed;
+  },
+  onVolume: (volume) => {
+    audio.unlock();
+    setVolume(volume);
+  },
 });
 
 // 3× fast-forward (playtest QoL 2026-07-07): scales how many fixed-size sim
@@ -56,7 +129,74 @@ const radarRight = new THREE.Vector3();
 
 // siren on volley start (§6.2) — watch for the sim-side transition
 let volleyWasActive = false;
+let lastCityHp = state.cities.reduce((sum, city) => sum + city.hp, 0);
+let lastPhase = state.phase;
+const heardTracers = new Set<object>();
+const heardBlastEffects = new Set<object>();
+const heardInterceptBlasts = new Set<object>();
+const heardShells = new Set<number>();
+const heardInterceptors = new Set<number>();
+const heardEnemies = new Set<number>();
+
+function syncAudioEvents(): void {
+  for (const tracer of state.effects.tracers) {
+    if (!heardTracers.has(tracer)) {
+      heardTracers.add(tracer);
+      audio.gun();
+    }
+  }
+  for (const effect of state.effects.blasts) {
+    if (!heardBlastEffects.has(effect)) {
+      heardBlastEffects.add(effect);
+      audio.blast(0.75);
+    }
+  }
+  for (const blast of state.interceptBlasts) {
+    if (!heardInterceptBlasts.has(blast)) {
+      heardInterceptBlasts.add(blast);
+      audio.blast(1.25);
+    }
+  }
+  for (const shell of state.shells) {
+    if (!heardShells.has(shell.id)) {
+      heardShells.add(shell.id);
+      audio.flak();
+    }
+  }
+  for (const interceptor of state.interceptors) {
+    if (!heardInterceptors.has(interceptor.id)) {
+      heardInterceptors.add(interceptor.id);
+      audio.launch();
+    }
+  }
+  for (const enemy of state.enemies) {
+    if (!heardEnemies.has(enemy.id)) {
+      heardEnemies.add(enemy.id);
+      if (enemy.defId === "ufo") audio.ufo();
+    }
+  }
+
+  const cityHp = state.cities.reduce((sum, city) => sum + city.hp, 0);
+  if (cityHp < lastCityHp) audio.cityHit(citiesAlive(state) < Math.ceil(lastCityHp / 2));
+  lastCityHp = cityHp;
+
+  if (lastPhase === "combat" && state.phase === "build") audio.roundClear();
+  lastPhase = state.phase;
+
+  pruneObjectSet(heardTracers, state.effects.tracers);
+  pruneObjectSet(heardBlastEffects, state.effects.blasts);
+  pruneObjectSet(heardInterceptBlasts, state.interceptBlasts);
+}
+
+function pruneObjectSet<T extends object>(set: Set<T>, live: T[]): void {
+  const liveSet = new Set(live);
+  for (const item of set) {
+    if (!liveSet.has(item)) set.delete(item);
+  }
+}
+
 window.addEventListener("keydown", (ev) => {
+  if (["Enter", "Tab", "Space", "KeyF", "KeyX"].includes(ev.code)) audio.unlock();
   if (ev.code === "Enter") startRound(state);
   if (ev.code === "Tab") {
     ev.preventDefault(); // TAB toggles views (§10), never moves browser focus
@@ -66,7 +206,7 @@ window.addEventListener("keydown", (ev) => {
     if (!coordView.isMapMode()) ev.preventDefault();
     coordView.onCommit(state);
   }
-  if (ev.code === "KeyF" && !coordView.isMapMode()) coordView.toggleScheme();
+  if (ev.code === "KeyF" && !coordView.isMapMode()) setFireScheme(coordView.toggleScheme());
   if (ev.code === "KeyX") toggleSpeed();
 });
 
@@ -95,10 +235,11 @@ function frame(now: number): void {
 
   const volleyOn = state.volley !== null;
   if (volleyOn && !volleyWasActive) {
-    siren();
+    audio.siren();
     simSpeed = 1; // missiles are the drama — never let them arrive at 3×
   }
   volleyWasActive = volleyOn;
+  syncAudioEvents();
 
   // map mode: orbit camera as usual. Coordinate mode: the view owns the
   // camera (and clicks aim instead of placing) — but the SIM NEVER PAUSES.
@@ -108,7 +249,12 @@ function frame(now: number): void {
   coordView.update(frameDt, state);
 
   sync.sync(state);
-  hud.update(state, placement.selection, placement.selectedTowerId, coordView.hudInfo(state), simSpeed);
+  hud.update(state, placement.selection, placement.selectedTowerId, coordView.hudInfo(state), {
+    open: settings.open,
+    fireScheme: settings.fireScheme,
+    simSpeed,
+    volume: settings.volume,
+  });
 
   // radar lateral axis: volley frame in coordinate view, else screen-right
   const frameRight = coordView.lateralRight();
