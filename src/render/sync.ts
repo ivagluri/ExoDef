@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { SWARM } from "../content/enemies";
 import type { BlastKind, GameState } from "../sim/state";
 import { makeAAMissileModel, makeBlastModel, makeBombModel, makeDroneModel, makeEnemyModel, makeInterceptorModel, makeShellModel, makeTowerModel, makeWarheadModel, MODEL_COLORS, type BlastVisual } from "./models";
 
@@ -27,6 +28,7 @@ export class RenderSync {
   private interceptorObjs = new Map<number, THREE.Object3D>();
   private blastObjs = new Map<object, THREE.Mesh>();
   private interceptBlastObjs = new Map<object, THREE.Mesh>();
+  private cloudObjs = new Map<object, THREE.Mesh>();
   private tracerObjs = new Map<object, THREE.Line>();
   private trails = new Map<number, TrailRecord>();
   private tracerMat = new THREE.LineBasicMaterial({
@@ -34,11 +36,11 @@ export class RenderSync {
     transparent: true,
     opacity: 0.9,
   });
-  private repulsorMat = new THREE.LineBasicMaterial({
-    color: MODEL_COLORS.repulsorBeam,
-    transparent: true,
-    opacity: 0.92,
-  });
+  private repulseBeamObjs = new Map<object, THREE.Mesh>();
+  // Wifi-signal cone: narrow at the dish, flaring toward the lifted enemy.
+  // Unit height, open-ended; scaled/oriented per frame. +Y is the enemy end.
+  private repulseBeamGeo = new THREE.CylinderGeometry(3.0, 0.4, 1, 8, 1, true);
+  private hackBeamObjs = new Map<object, { group: THREE.Group; lines: THREE.Line[]; mats: THREE.LineBasicMaterial[]; bucket: number }>();
   private droneMat = new THREE.LineBasicMaterial({
     color: MODEL_COLORS.droneBeam,
     transparent: true,
@@ -90,7 +92,16 @@ export class RenderSync {
       (e, obj) => {
         obj.position.copy(e.pos);
         if (e.defId === "mothership") obj.rotation.y = 0;
-        else obj.rotation.y += 0.01; // idle spin, reads as "alive"
+        else obj.rotation.y += e.hacked ? 0.06 : 0.01; // idle spin, reads as "alive"
+        // hack-array conversion: converted units flip to friendly cyan once
+        if (e.hacked && !obj.userData.hackTinted) {
+          obj.userData.hackTinted = true;
+          obj.traverse((child) => {
+            if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshLambertMaterial) {
+              child.material.color.setHex(MODEL_COLORS.hackedTint);
+            }
+          });
+        }
       },
     );
     this.reconcile(
@@ -156,12 +167,16 @@ export class RenderSync {
     this.pruneTrails(state);
     this.syncBlasts(state);
     this.syncSpheres(state.interceptBlasts, this.interceptBlastObjs);
+    this.syncClouds(state);
     this.syncTracers(state);
+    this.syncRepulseBeams(state);
+    this.syncHackBeams(state);
     if (state.coresDirty) {
       this.refreshCores(state);
       state.coresDirty = false;
     }
     this.syncCoreGlow(state);
+    this.syncSwarmPips(state);
   }
 
   /** Solid ribbon trail (§12): recent positions rebuilt as capped low-poly segments. */
@@ -305,10 +320,7 @@ export class RenderSync {
     for (const tracer of state.effects.tracers) {
       if (!this.tracerObjs.has(tracer)) {
         const geo = new THREE.BufferGeometry().setFromPoints([tracer.from, tracer.to]);
-        const mat =
-          tracer.kind === "repulsor" ? this.repulsorMat :
-          tracer.kind === "drone" ? this.droneMat :
-          this.tracerMat;
+        const mat = tracer.kind === "drone" ? this.droneMat : this.tracerMat;
         const line = new THREE.Line(geo, mat);
         this.tracerObjs.set(tracer, line);
         this.scene.add(line);
@@ -319,6 +331,187 @@ export class RenderSync {
         this.scene.remove(line);
         line.geometry.dispose();
         this.tracerObjs.delete(key);
+      }
+    }
+  }
+
+  /** Napalm clouds (§4): translucent ember blobs that flare in, simmer, fade out. */
+  private syncClouds(state: GameState): void {
+    const live = new Set<object>(state.clouds);
+    for (const cloud of state.clouds) {
+      let mesh = this.cloudObjs.get(cloud);
+      if (!mesh) {
+        mesh = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(1, 1),
+          new THREE.MeshBasicMaterial({
+            color: MODEL_COLORS.napalmCloud,
+            transparent: true,
+            opacity: 0.3,
+            depthWrite: false,
+          }),
+        );
+        mesh.renderOrder = 3;
+        mesh.position.copy(cloud.pos);
+        this.cloudObjs.set(cloud, mesh);
+        this.scene.add(mesh);
+      }
+      const age = cloud.maxTtl - cloud.ttl;
+      const ignite = Math.min(1, age * 3.5); // flare to full size fast
+      mesh.scale.setScalar(Math.max(0.01, cloud.radius * ignite));
+      const fade = Math.min(1, cloud.ttl / 1.2);
+      const simmer = 0.26 + 0.07 * Math.sin(state.simTime * 5 + cloud.maxTtl * 7);
+      (mesh.material as THREE.MeshBasicMaterial).opacity = simmer * fade + 0.08;
+    }
+    for (const [key, mesh] of this.cloudObjs) {
+      if (!live.has(key)) {
+        this.scene.remove(mesh);
+        mesh.geometry.dispose();
+        (mesh.material as THREE.Material).dispose();
+        this.cloudObjs.delete(key);
+      }
+    }
+  }
+
+  /** Swarm-charge pips (§5): small ember dots above a core, one per absorbed landing. */
+  private syncSwarmPips(state: GameState): void {
+    for (const core of state.cores) {
+      const group = this.coreGroups[core.index];
+      let pips = group.userData.swarmPips as THREE.Mesh[] | undefined;
+      if (!pips) {
+        pips = [];
+        for (let i = 0; i < SWARM.landingsPerCoreHit - 1; i++) {
+          const pip = new THREE.Mesh(
+            new THREE.SphereGeometry(1.05, 6, 5),
+            new THREE.MeshBasicMaterial({ color: MODEL_COLORS.impactBlast }),
+          );
+          pip.position.set((i - (SWARM.landingsPerCoreHit - 2) / 2) * 3.4, 14, 0);
+          pip.visible = false;
+          group.add(pip);
+          pips.push(pip);
+        }
+        group.userData.swarmPips = pips;
+      }
+      pips.forEach((pip, i) => {
+        const on = core.hp > 0 && core.swarmCharge > i;
+        if (pip.visible !== on) pip.visible = on;
+      });
+    }
+  }
+
+  /** Hack-array conversion crackle: three jagged electric arcs from the antenna
+   *  tips to the converted unit, re-jittered ~24×/s so they flicker. Deliberately
+   *  unlike the repulsor's smooth cone — this reads as static, not a push. */
+  private syncHackBeams(state: GameState): void {
+    const TIPS = [
+      new THREE.Vector3(-2.2, 11.2, -2.2),
+      new THREE.Vector3(2.2, 10.2, -1.4),
+      new THREE.Vector3(0, 13.2, 2.2),
+    ]; // hack tower antenna tips (models.ts)
+    const ARC_POINTS = 8;
+    const live = new Set<object>();
+    for (const beam of state.effects.hackBeams) {
+      const tower = state.towers.find((t) => t.id === beam.towerId && t.alive);
+      const enemy = state.enemies.find((e) => e.id === beam.enemyId && e.alive);
+      if (!tower || !enemy) continue;
+      live.add(beam);
+      let rec = this.hackBeamObjs.get(beam);
+      if (!rec) {
+        const group = new THREE.Group();
+        const lines: THREE.Line[] = [];
+        const mats: THREE.LineBasicMaterial[] = [];
+        for (let i = 0; i < TIPS.length; i++) {
+          const mat = new THREE.LineBasicMaterial({
+            color: i === 1 ? MODEL_COLORS.hackArray : MODEL_COLORS.hackTip,
+            transparent: true,
+            opacity: 0.9,
+          });
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(ARC_POINTS * 3), 3));
+          const line = new THREE.Line(geo, mat);
+          line.renderOrder = 6;
+          group.add(line);
+          lines.push(line);
+          mats.push(mat);
+        }
+        rec = { group, lines, mats, bucket: -1 };
+        this.hackBeamObjs.set(beam, rec);
+        this.scene.add(group);
+      }
+      // re-jitter on a ~24 Hz bucket so the crackle reads even at high fps
+      const bucket = Math.floor(state.simTime * 24);
+      const fade = Math.min(1, beam.ttl / 0.2);
+      if (bucket !== rec.bucket) {
+        rec.bucket = bucket;
+        for (let i = 0; i < rec.lines.length; i++) {
+          const from = tower.pos.clone().add(TIPS[i]);
+          const to = enemy.pos;
+          const amp = 1.2 + from.distanceTo(to) * 0.03;
+          const attr = rec.lines[i].geometry.getAttribute("position") as THREE.BufferAttribute;
+          for (let p = 0; p < ARC_POINTS; p++) {
+            const t = p / (ARC_POINTS - 1);
+            const envelope = Math.sin(Math.PI * t) * amp; // pinned at both ends
+            attr.setXYZ(
+              p,
+              from.x + (to.x - from.x) * t + (Math.random() - 0.5) * 2 * envelope,
+              from.y + (to.y - from.y) * t + (Math.random() - 0.5) * 2 * envelope,
+              from.z + (to.z - from.z) * t + (Math.random() - 0.5) * 2 * envelope,
+            );
+          }
+          attr.needsUpdate = true;
+          rec.lines[i].geometry.computeBoundingSphere();
+          // per-arc flicker: mostly bright, occasionally winks out
+          rec.mats[i].opacity = (Math.random() < 0.18 ? 0.08 : 0.55 + Math.random() * 0.45) * fade;
+        }
+      }
+    }
+    for (const [key, rec] of this.hackBeamObjs) {
+      if (!live.has(key)) {
+        this.scene.remove(rec.group);
+        for (const line of rec.lines) line.geometry.dispose();
+        for (const mat of rec.mats) mat.dispose();
+        this.hackBeamObjs.delete(key);
+      }
+    }
+  }
+
+  /** Repulsor cone beam: dish → lifted enemy, pulsing while the debuff holds. */
+  private syncRepulseBeams(state: GameState): void {
+    const live = new Set<object>();
+    for (const beam of state.effects.repulseBeams) {
+      const tower = state.towers.find((t) => t.id === beam.towerId && t.alive);
+      const enemy = state.enemies.find((e) => e.id === beam.enemyId && e.alive);
+      if (!tower || !enemy) continue;
+      live.add(beam);
+      let mesh = this.repulseBeamObjs.get(beam);
+      if (!mesh) {
+        const mat = new THREE.MeshBasicMaterial({
+          color: MODEL_COLORS.repulsorBeam,
+          transparent: true,
+          opacity: 0.35,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        });
+        mesh = new THREE.Mesh(this.repulseBeamGeo, mat);
+        mesh.renderOrder = 5;
+        this.repulseBeamObjs.set(beam, mesh);
+        this.scene.add(mesh);
+      }
+      const from = tower.pos.clone().setY(12.5); // top of the repulsor dish
+      const delta = enemy.pos.clone().sub(from);
+      const len = Math.max(delta.length(), 0.01);
+      mesh.position.copy(from).addScaledVector(delta, 0.5);
+      mesh.quaternion.setFromUnitVectors(TRAIL_UP, delta.normalize());
+      mesh.scale.set(1, len, 1);
+      const fadeIn = Math.min(1, (beam.maxTtl - beam.ttl) * 6 + 0.2);
+      const fadeOut = Math.min(1, beam.ttl / 0.45);
+      const pulse = 0.3 + 0.14 * Math.sin(state.simTime * 14);
+      (mesh.material as THREE.MeshBasicMaterial).opacity = pulse * fadeIn * fadeOut;
+    }
+    for (const [key, mesh] of this.repulseBeamObjs) {
+      if (!live.has(key)) {
+        this.scene.remove(mesh);
+        (mesh.material as THREE.Material).dispose();
+        this.repulseBeamObjs.delete(key);
       }
     }
   }

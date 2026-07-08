@@ -1,14 +1,18 @@
 import * as THREE from "three";
 import { BANDS, MOTHERSHIP } from "../balance";
-import { BOMBER, DIVER, ENEMY_DEFS, UFO } from "../content/enemies";
-import { detonateAt, spawnGruntGroup } from "./enemies";
+import { BOMBER, DIVER, ENEMY_DEFS, SPLITTER, UFO } from "../content/enemies";
+import { detonateAt, killEnemy, spawnFragments, spawnGruntGroup } from "./enemies";
 import { pick, rand, randRange } from "./rng";
 import type { Enemy, EnemyAI, GameState } from "./state";
 
 // Individually-moving enemies (GAME-DESIGN.md §5):
-//   bomber — seeks a core/tower, hovers above it, drops bombs
-//   diver  — cruises briefly at HIGH, then plunges kamikaze-style
-//   ufo    — harmless high-altitude cash piñata transit
+//   bomber   — seeks a core/tower, hovers above it, drops bombs
+//   diver    — cruises briefly at HIGH, then plunges kamikaze-style
+//   ufo      — harmless high-altitude cash piñata transit
+//   splitter — weaving descent; bursts into fragments on kill or at low altitude
+//   fragment — scattered splitter debris falling to a grunt-style landing
+// Hack-array kamikazes are also driven here: any hacked enemy abandons its
+// behavior and rams the closest other invader.
 
 function makeEnemy(state: GameState, defId: string, pos: THREE.Vector3, ai: EnemyAI, hpScale = 1): Enemy {
   const enemy: Enemy = {
@@ -57,6 +61,22 @@ export function spawnUfo(state: GameState, hpScale = 1): void {
     timer: 0,
     vel: new THREE.Vector3(UFO.speed * dir, 0, 0),
     target: new THREE.Vector3(),
+  }, hpScale);
+}
+
+export function spawnSplitter(state: GameState, hpScale = 1): void {
+  const angle = rand() * Math.PI * 2;
+  const pos = new THREE.Vector3(
+    Math.cos(angle) * SPLITTER.spawnRadius * (0.4 + rand() * 0.6),
+    SPLITTER.spawnY,
+    Math.sin(angle) * SPLITTER.spawnRadius * (0.4 + rand() * 0.6),
+  );
+  makeEnemy(state, "splitter", pos, {
+    mode: "descend",
+    timer: rand() * Math.PI * 2, // heading phase
+    vel: new THREE.Vector3(),
+    target: new THREE.Vector3(),
+    hpScale, // fragments inherit the wave's scale
   }, hpScale);
 }
 
@@ -225,6 +245,79 @@ function updateMothership(state: GameState, enemy: Enemy, dt: number): void {
   }
 }
 
+function updateSplitter(state: GameState, enemy: Enemy, dt: number): void {
+  const ai = enemy.ai!;
+  // serpentine drift while sinking; steer home when straying off-map
+  const dist = Math.hypot(enemy.pos.x, enemy.pos.z);
+  if (dist > SPLITTER.boundRadius) {
+    const home = Math.atan2(-enemy.pos.z, -enemy.pos.x);
+    let diff = home - ai.timer;
+    diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+    ai.timer += Math.sign(diff) * Math.min(Math.abs(diff), SPLITTER.weaveTurn * 2 * dt);
+  } else {
+    ai.timer += Math.sin(state.simTime * 0.5 + enemy.id) * SPLITTER.weaveTurn * dt;
+  }
+  enemy.pos.x += Math.cos(ai.timer) * SPLITTER.weaveSpeed * dt;
+  enemy.pos.z += Math.sin(ai.timer) * SPLITTER.weaveSpeed * dt;
+  enemy.pos.y -= SPLITTER.descentSpeed * dt;
+  if (enemy.pos.y <= SPLITTER.splitY) {
+    // intact at low altitude: burst anyway — no bounty, fragments arrive low
+    enemy.alive = false;
+    state.effects.blasts.push({ pos: enemy.pos.clone(), radius: 6, ttl: 0.35, maxTtl: 0.35, kind: "impact" });
+    spawnFragments(state, enemy.pos, ai.hpScale ?? 1);
+  }
+}
+
+function updateFragment(state: GameState, enemy: Enemy, dt: number): void {
+  const ai = enemy.ai!;
+  enemy.pos.addScaledVector(ai.vel, dt);
+  if (enemy.pos.y <= 0.5) {
+    enemy.alive = false; // no bounty for impacts
+    detonateAt(state, enemy.pos.setY(0), SPLITTER.fragmentBlastRadius);
+  }
+}
+
+/** Hack-array kamikaze: one run at the closest other invader, detonate on contact. */
+function updateHacked(state: GameState, enemy: Enemy, dt: number): void {
+  const hacked = enemy.hacked!;
+  let target = state.enemies.find((e) => e.id === hacked.targetId && e.alive && !e.hacked) ?? null;
+  if (!target) {
+    let bestDist = Infinity;
+    for (const other of state.enemies) {
+      if (!other.alive || other.hacked || other.id === enemy.id) continue;
+      const d = enemy.pos.distanceTo(other.pos);
+      if (d < bestDist) {
+        bestDist = d;
+        target = other;
+      }
+    }
+    hacked.targetId = target?.id ?? null;
+  }
+  if (!target) {
+    // alone: fizzle out harmlessly
+    enemy.alive = false;
+    state.effects.blasts.push({ pos: enemy.pos.clone(), radius: 3, ttl: 0.25, maxTtl: 0.25, kind: "bossBay" });
+    return;
+  }
+  const toTarget = target.pos.clone().sub(enemy.pos);
+  const hitRadius = (target.defId === "mothership" ? MOTHERSHIP.hullRadius : 0) + 2.5;
+  const step = hacked.speed * dt;
+  if (toTarget.length() <= step + hitRadius) {
+    state.effects.blasts.push({ pos: target.pos.clone(), radius: hacked.aoeRadius, ttl: 0.45, maxTtl: 0.45, kind: "flak" });
+    for (const other of state.enemies) {
+      if (!other.alive || other.id === enemy.id) continue;
+      const hull = other.defId === "mothership" ? MOTHERSHIP.hullRadius : 0;
+      if (other.pos.distanceTo(target.pos) - hull <= hacked.aoeRadius) {
+        other.hp -= hacked.damage;
+        if (other.hp <= 0) killEnemy(state, other); // kamikaze kills pay normal bounty
+      }
+    }
+    killEnemy(state, enemy); // hacked flag suppresses its own bounty; splitters still burst
+  } else {
+    enemy.pos.addScaledVector(toTarget.normalize(), step);
+  }
+}
+
 function updateRepulse(enemy: Enemy, dt: number): boolean {
   if (!enemy.repulse) return false;
   enemy.pos.y = Math.min(BANDS.entryTop, enemy.pos.y + enemy.repulse.liftSpeed * dt);
@@ -235,12 +328,19 @@ function updateRepulse(enemy: Enemy, dt: number): boolean {
 
 export function updateRaiders(state: GameState, dt: number): void {
   for (const enemy of state.enemies) {
-    if (!enemy.alive || !enemy.ai) continue;
+    if (!enemy.alive) continue;
+    if (enemy.hacked) {
+      updateHacked(state, enemy, dt);
+      continue;
+    }
+    if (!enemy.ai) continue;
     if (enemy.defId !== "mothership" && updateRepulse(enemy, dt)) continue;
     if (enemy.defId === "bomber") updateBomber(state, enemy, dt);
     else if (enemy.defId === "diver") updateDiver(state, enemy, dt);
     else if (enemy.defId === "ufo") updateUfo(enemy, dt);
     else if (enemy.defId === "mothership") updateMothership(state, enemy, dt);
+    else if (enemy.defId === "splitter") updateSplitter(state, enemy, dt);
+    else if (enemy.defId === "fragment") updateFragment(state, enemy, dt);
   }
   state.enemies = state.enemies.filter((e) => e.alive);
 }

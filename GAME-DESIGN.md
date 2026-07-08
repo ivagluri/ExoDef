@@ -6,7 +6,7 @@ A 3D tower defense on a single rotating orbital defence platform. Alien waves de
 
 This document is the buildable spec. It encodes every decision from the design interview and live playtest passes on 2026-07-07. Numbers marked **[tunable]** are starting values expected to change in playtesting; everything else is a locked design decision. Builder agents should implement from this doc without re-deriving choices.
 
-**Current implementation snapshot:** EXODEF is playable through wave 50 and freeplay with six tower types, mothership boss waves, plotted missile interception, persistent radar, WebAudio cues, local high score, paid damaged-core repair, and Phase 6 playtest fixes. Balance tuning is intentionally deferred until the user chooses that as a next phase.
+**Current implementation snapshot:** EXODEF is playable through wave 50 and freeplay with eight tower types, seven enemy types plus the mothership boss, plotted missile interception, persistent radar, WebAudio cues, local high score, and paid damaged-core repair. Phase 7 added Napalm Clouder + Aerial Hack Array towers and Splitter + Swarm Cluster enemies. Balance tuning is intentionally deferred until the user chooses that as a next phase.
 
 ---
 
@@ -97,7 +97,7 @@ Band edges **[tunable]**.
 
 ## 4. Towers
 
-All towers are **data-driven** — adding a tower is adding a data entry + a model, no new systems. The current playable roster is six towers: the original gun/flak/battery set plus Phase 6 repulsor, AA missile, and drone additions.
+All towers are **data-driven** — adding a tower is adding a data entry + a model, no new systems. The current playable roster is eight towers: the original gun/flak/battery set, Phase 6 repulsor/AA missile/drone, and Phase 7 napalm clouder + aerial hack array.
 
 Towers occupy a circular footprint (radius 6 u), placed freely on open ground (§ placement rules in 11.2). Every tower has **1 HP** — any bomb/warhead/landing that touches it destroys it; rebuild costs full price. Range is a **sphere** (dome above ground) centered on the tower.
 
@@ -111,6 +111,8 @@ Towers occupy a circular footprint (radius 6 u), placed freely on open ground (�
 | **Repulsor Beam** | $250 | 76 | ≤120 | control debuff | Applies a temporary upward-retreat debuff to normal invaders, then retargets after cooldown. No warhead/boss effect. |
 | **AA Missile** | $450 | near-global | ENTRY/HIGH | slow guided anti-invader missile | Automatic anti-invader only. Enemy warheads remain purely player-fought. |
 | **Drone Launcher** | $350 | broad | HIGH | persistent drone DPS | Maintains reusable drones; tier upgrades increase active drone cap. |
+| **Napalm Clouder** | $350 | 70 | LOW/MID (≤60) | 12 DPS chip field | *(Phase 7)* Auto-lobs a canister that bursts into a lingering cloud (~6s, 14 u); chip damage to everything inside. Area denial vs lingerers: swarm clusters, splitter fragments, the slow-sinking boss. Never affects warheads. |
+| **Aerial Hack Array** | $500 | 90 | ≤130 | conversion | *(Phase 7)* Converts one invader into a kamikaze that rams the closest other invader and detonates (small AoE); self-destructs harmlessly if alone. Mothership immune. The hacked unit pays no bounty; its kills pay normal bounty. Holds fire unless ≥2 targets exist. |
 
 ### Upgrade tiers (each tower: 2 upgrade tiers, applied per-tower)
 
@@ -122,16 +124,18 @@ Towers occupy a circular footprint (radius 6 u), placed freely on open ground (�
 | Repulsor | $260 → shorter cooldown, longer/stronger lift | $520 → faster cooldown, longer/stronger lift, more reach |
 | AA Missile | $380 → faster/stronger guided missiles | $700 → faster fire, stronger missiles, higher speed |
 | Drone | $330 → 2 active drones | $620 → 3 active drones, stronger/faster coverage |
+| Napalm | $300 → bigger/longer/hotter clouds, faster lob | $560 → 22 DPS, radius 20, ~8s clouds |
+| Hack Array | $420 → shorter cooldown, stronger blast | $760 → 5.5s cooldown, 130 dmg, wider AoE |
 
 Additional batteries: **$600** each **[tunable]**. All numbers **[tunable]**.
 
-Targeting priority (per tower, cycle on click): First (lowest altitude) / Strongest / Closest. Default: First, except AA Missile defaults to Strongest so its slow shots seek meaningful targets immediately.
+Targeting priority (per tower, cycle on click): First (lowest altitude) / Strongest / Closest. Default: First, except AA Missile and Hack Array default to Strongest so their slow/precious shots seek meaningful targets immediately.
 
 ### Data schema (builder reference)
 
 ```ts
 interface TowerDef {
-  id: string;                    // "gun", "flak", "battery", "repulsor", "aaMissile", "drone"
+  id: string;                    // "gun", "flak", "battery", "repulsor", "aaMissile", "drone", "napalm", "hack"
   cost: number;
   footprintRadius: number;       // 6
   tiers: TowerTier[];            // index 0 = base
@@ -149,6 +153,10 @@ interface TowerTier {
   guided?: { damage: number; period: number; speed: number };    // AA missile
   drone?: { count: number; damage: number; period: number;
             speed: number; attackRange: number };
+  cloud?: { period: number; shellSpeed: number; dps: number;
+            cloudRadius: number; cloudDuration: number };       // napalm
+  hack?: { cooldown: number; kamikazeSpeed: number;
+           damage: number; aoeRadius: number };                 // hack array
 }
 ```
 
@@ -167,14 +175,16 @@ Cores have **2 HP**. Bomb hit = 1, grunt landing = 1, missile warhead = 2 (insta
 | **Diver** ↓ | 15 | $15 | Spawns at HIGH, cruises 3s, then plunges at 40 u/s straight at a random structure. Impact = same as grunt landing. Tests low-altitude reaction coverage. |
 | **Bonus UFO** ◑ | 80 | $150 | Rare (see wave table). Crosses the map at y≈100 (HIGH) at 25 u/s, on screen ~8–10s, harms nothing. Cash piñata and high-altitude coverage check for flak upgrades, AA Missile, drones, and Repulsor. |
 | **Mothership (boss)** ⬢ | ~1500 [tunable] | $500 | **Boss stages** (added 2026-07-07, user idea): waves 15/30/45 are boss waves. One mega enemy — a huge slow hulk that descends gradually while **periodically emitting small enemies** (grunt clusters, occasional divers) from its underside. Long fight but not a bullet sponge: big hull = every tower connects, so time-to-kill stays reasonable [tunable in playtest]. Killing it ends the emission stream; if it reaches low altitude it becomes a slow roaming disaster (heavy bomb drops) rather than instantly detonating. Escalates per appearance (HP, emission rate). Wave 50 finale = mothership + max volley simultaneously. |
+| **Splitter** ◈ | 80 | $30 | *(Phase 7)* Solo descender with a weaving drift. **Bursts into 4 fragments on kill OR on reaching y≈20 intact** — the fragment phase is never skippable, only relocatable: kill it high and fragments scatter with cleanup time; ignore it and they pop out low. Fragments (10 HP, $4) scatter outward, fall fast, and land like grunts. Punishes single-target focus; napalm/hack food. |
+| **Swarm cluster** ⁙ | 6 each | $3 each | *(Phase 7)* Tight formation of ~12–16 swarmlings riding the grunt group system with faster, denser params. A landing destroys towers as usual, but a core only takes **1 hit per 3 nearby landings** (charge pips shown above the core; charge resets at round end [tunable]). Too many targets for single-shot towers — napalm's home turf, and a feast for hack kamikazes. |
 
 Grunt descent speed and group HP scale with wave number (§9). All numbers **[tunable]**.
 
 ```ts
 interface EnemyDef {
-  id: "grunt" | "bomber" | "diver" | "ufo";  // extensible
+  id: "grunt" | "bomber" | "diver" | "ufo" | "splitter" | "fragment" | "swarmling";  // extensible
   hp: number; bounty: number;
-  behavior: "formationDrift" | "seekAndBomb" | "plunge" | "transit";
+  behavior: "formationDrift" | "seekAndBomb" | "plunge" | "transit" | "boss" | "splitter" | "fragment";
   params: Record<string, number>;            // speeds, periods, radii
 }
 ```
@@ -366,14 +376,15 @@ Sanity check: round 1–3 income (~30 grunts ≈ $240 + $450 core income) afford
 | 9 | 12 grunts + 1 bomber | **☄ 3 warheads** |
 | 10 | 24 grunts + 3 bombers + 3 divers | **milestone: bonus core** |
 | 11 | 20 grunts + 2 bombers + 4 divers | |
-| 12 | 18 grunts + 3 bombers | **☄ 3 warheads** |
+| 12 | 18 grunts + 3 bombers + 2 splitters | **☄ 3 warheads** · **splitter debut** (Phase 7) |
 | 13 | 28 grunts + 4 bombers + 4 divers | |
-| 14 | 24 grunts + 4 bombers + 6 divers | pressure peak before… |
+| 14 | 24 grunts + 4 bombers + 6 divers + swarm cluster (14) | pressure peak before… · **swarm debut** (Phase 7) |
 | 15 | **BOSS: mothership** (emits grunts/divers; replaces the normal ground wave) | **☄ 4 warheads — counterforce debut (targets batteries)** — boss + counterforce volley together is the intended intensity spike; if playtest says it's too much, move counterforce debut to 16 |
 
 ### Waves 16–50 (formula, hand-tuned exceptions allowed)
 
 - Enemy HP × `1.04^(wave−15)`; group counts +8% / wave (rounded); grunt descent speed +1% / wave **[tunable]**.
+- **Phase 7 roster in the mix [tunable]:** splitters every formula wave (1 + one more per 6 waves past 15); swarm clusters on alternating waves from 17 (size 12 growing to a 20 cap, extra group per 12 waves). Both continue growing into freeplay.
 - **Spawn delivery loosens with wave** (2026-07-07 playtest): early waves arrive in tight batches (good), but later waves should feel irregular and "random attack"-like — same volume, spread-out staggered timing. Implement as a spawn-jitter/spread parameter in the formula generator that scales with wave number (it may retroactively loosen waves ~10–15 too).
 - Volley every 3–4 waves; warheads `2 + floor((wave−5)/4)` cap 8; counterforce chance 25%.
 - Bonus core at each ×10 milestone.
@@ -406,7 +417,7 @@ HP × `1.06^(wave−50)`, counts +10%/wave, volley every 2–3 waves, warhead ca
 | TAB | Toggle map ⇄ coordinate view (only while a volley is active) |
 | Q / E, or right-drag | Orbit map camera |
 | Scroll | Zoom step |
-| 1–6 | Select tower type for placement (gun / flak / battery / repulsor / AA missile / drone) |
+| 1–8 | Select tower type for placement (gun / flak / battery / repulsor / AA missile / drone / napalm / hack array) |
 | ESC | Cancel placement / close panel |
 | ENTER | Start next round |
 | X (or HUD button) | Toggle 3× fast-forward **[tunable]** (2026-07-07 playtest QoL; auto-resets to 1× when a volley launches — the siren moment is never fast-forwarded) |
@@ -513,7 +524,7 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 **Backlog (explicitly not current active scope):**
 - Radar tower is not active scope; the persistent HUD radar already solves the v1 readability problem. Any future radar tower would need a distinct support role.
 - High-alt sniper tower remains a possible future concept, but "Beam" now means the Repulsor Beam control tower.
-- More enemies: shielded tank, splitter (mothership/boss stages were promoted into core v1 — see §5/§9)
+- More enemies: shielded tank, **tower-hunter drone** (user idea 2026-07-07: independent drone that hunts towers; pairs with the Blockade Launcher as its counter). ~~Splitter~~ **PROMOTED 2026-07-07 into Phase 7** — see §5. (Mothership/boss stages were promoted into core v1 earlier — see §5/§9.)
 - MIRV warheads (split at MID — interception triage drama)
 - **Converging volleys — multiple headings in one volley** (2026-07-07, user): warheads closing on the cores from several compass directions simultaneously. Today every volley already comes from a random direction, but all warheads *within* a volley share it — the coordinate view's whole frame (§7.1) and the top view's approach-side overage assume one heading. Multi-heading needs a view rethink: per-heading sub-volleys the player cycles between, or a symmetric top view with a rotating frame. Good candidate for a late-game/freeplay escalation once the basic plotting loop is proven.
 - Gamepad support (twin-stick aiming maps beautifully to the two-viewport scheme)
@@ -524,11 +535,11 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 **Weapon ideas from the 2026-07-07 playtest (backlog; promoted ideas marked):**
 - **Frag bomb** — (no further notes yet)
 - ~~**Unlimited-range missile tower**~~ — **PROMOTED 2026-07-07 as AA Missile tower.** Slow guided anti-invader shots; never targets warheads.
-- **"Napalm clouder"** — leaves a chip-damage field, not across full x/y but a set volume that increases with upgrade (but never full x/y).
-- **Orbital mine launcher** — launches magnetic mine, exact mechanics tbd.
+- ~~**"Napalm clouder"**~~ — **PROMOTED 2026-07-07 into Phase 7 as Napalm Clouder.** Lobbed canister → lingering chip-damage cloud; volume grows with upgrade, never full x/y.
+- **Orbital mine launcher** — launches magnetic mine, exact mechanics tbd. **Phase 8 shortlist** (user, 2026-07-07).
 - ~~**Repulsor beam**~~ — **PROMOTED 2026-07-07 as Repulsor Beam tower.** Applies upward-retreat debuffs on a cooldown.
-- **Aerial hack array** — "converts" enemy to become kamikaze unit that attacks other invaders; closest unit for simplicity, or self-destruct if alone; damage scaling tbd.
-- **Blockade launcher** — purely defensive unit, slowly builds and launches physical barriers, not very high up but can soak 2–3 basic enemy impacts. Might be tricky to balance.
+- ~~**Aerial hack array**~~ — **PROMOTED 2026-07-07 into Phase 7 as Aerial Hack Array.** One-run kamikaze conversion, closest-unit targeting, self-destruct if alone.
+- **Blockade launcher** — purely defensive unit, slowly builds and launches physical barriers, not very high up but can soak 2–3 basic enemy impacts. Might be tricky to balance. **Phase 8 shortlist** (user, 2026-07-07) — pairs with the tower-hunter drone enemy.
 - ~~**Drone launcher**~~ — **PROMOTED 2026-07-07 as Drone Launcher tower.** Persistent reusable drones with tiered active-drone caps.
 - **Nuke** — not automatic; can wipe all but bosses, but wipes player towers as well, except the missile battery.
 

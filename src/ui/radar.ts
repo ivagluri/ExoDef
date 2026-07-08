@@ -21,6 +21,9 @@ const DOT_STYLE: Record<string, { r: number; color: string }> = {
   diver: { r: 3.0, color: "#ff5a5a" },
   ufo: { r: 2.7, color: "#c8ccd8" },
   mothership: { r: 5.4, color: "#8f8cff" },
+  splitter: { r: 3.2, color: "#ffb03c" },
+  fragment: { r: 1.6, color: "#d98a2c" },
+  swarmling: { r: 1.1, color: "#8a9a2e" }, // dim — cluster reads as texture
 };
 
 export interface Radar {

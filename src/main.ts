@@ -7,7 +7,7 @@ import { CoordinateView } from "./render/coordview";
 import { createWorld } from "./render/scene";
 import { RenderSync } from "./render/sync";
 import { cyclePriority, repairCore, sellTower, upgradeTower } from "./sim/actions";
-import { simTick, startRound, triggerTestBoss, triggerTestMissiles } from "./sim/game";
+import { simTick, startRound, triggerTestBoss, triggerTestMissiles, triggerTestSplitter, triggerTestSwarm } from "./sim/game";
 import { coresAlive, createGameState } from "./sim/state";
 import { createHud } from "./ui/hud";
 import { createRadar } from "./ui/radar";
@@ -126,6 +126,14 @@ const hud = createHud({
   onTestBoss: () => {
     audio.unlock();
     triggerTestBoss(state);
+  },
+  onTestSplitter: () => {
+    audio.unlock();
+    triggerTestSplitter(state);
+  },
+  onTestSwarm: () => {
+    audio.unlock();
+    triggerTestSwarm(state);
   },
 });
 

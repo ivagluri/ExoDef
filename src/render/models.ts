@@ -15,6 +15,12 @@ export const MODEL_COLORS = {
   drone: 0x7dff8a,
   droneCore: 0x35e0e8,
   batteryDormant: 0x1a4a54, // status light before the first siren (§3)
+  napalm: 0xe8542a,
+  napalmTank: 0xffb03c,
+  napalmCloud: 0xff7a2d,
+  hackArray: 0xd18cff,
+  hackTip: 0x35e0e8,
+  hackedTint: 0x35e0e8, // converted kamikazes read as friendly cyan
   grunt: 0xe040c8,
   bomber: 0x54e05a,
   diver: 0xff5a5a,
@@ -22,6 +28,9 @@ export const MODEL_COLORS = {
   ufoDome: 0x8fd8ff,
   mothership: 0x8f8cff,
   mothershipCore: 0xff5a5a,
+  splitter: 0xffb03c,
+  fragment: 0xd98a2c,
+  swarmling: 0xd0e838,
   bossBayFlash: 0xffd9a0,
   bomb: 0xff7a2d,
   bombCore: 0x3a2430,
@@ -108,6 +117,29 @@ export function makeTowerModel(defId: string): THREE.Group {
     const armB = armA.clone();
     armB.rotation.y = Math.PI / 2;
     group.add(pad, mast, hub, armA, armB);
+  } else if (defId === "napalm") {
+    // squat fuel tank + angled mortar tube
+    const tank = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 4, 3.4, 8), lambert(MODEL_COLORS.napalm));
+    tank.position.y = 1.7;
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), lambert(MODEL_COLORS.napalmTank));
+    dome.position.y = 3.4;
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.4, 6.5, 7), lambert(MODEL_COLORS.napalm));
+    tube.position.set(1.6, 5.6, 0);
+    tube.rotation.z = -0.5;
+    group.add(tank, dome, tube);
+  } else if (defId === "hack") {
+    // antenna array: slab base + three masts with signal tips
+    const base = new THREE.Mesh(new THREE.BoxGeometry(7, 2.4, 7), lambert(MODEL_COLORS.hackArray));
+    base.position.y = 1.2;
+    group.add(base);
+    const offsets: Array<[number, number, number]> = [[-2.2, 8, -2.2], [2.2, 7, -1.4], [0, 10, 2.2]];
+    for (const [x, h, z] of offsets) {
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.55, h, 6), lambert(MODEL_COLORS.hackArray));
+      mast.position.set(x, 2.4 + h / 2, z);
+      const tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.9), lambert(MODEL_COLORS.hackTip));
+      tip.position.set(x, 2.4 + h + 0.8, z);
+      group.add(mast, tip);
+    }
   } else {
     // fallback: unmistakable placeholder
     const box = new THREE.Mesh(new THREE.BoxGeometry(6, 8, 6), lambert(0xff00ff));
@@ -141,6 +173,21 @@ export function makeEnemyModel(defId: string): THREE.Object3D {
     dome.position.y = 0.8;
     group.add(disc, dome);
     return group;
+  }
+  if (defId === "splitter") {
+    // faceted amber shell with a visible seam ring — reads "this comes apart"
+    const group = new THREE.Group();
+    const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(4, 0), lambert(MODEL_COLORS.splitter));
+    const seam = new THREE.Mesh(new THREE.TorusGeometry(3.4, 0.5, 5, 8), lambert(MODEL_COLORS.fragment));
+    seam.rotation.x = Math.PI / 2;
+    group.add(shell, seam);
+    return group;
+  }
+  if (defId === "fragment") {
+    return new THREE.Mesh(new THREE.TetrahedronGeometry(2), lambert(MODEL_COLORS.fragment));
+  }
+  if (defId === "swarmling") {
+    return new THREE.Mesh(new THREE.TetrahedronGeometry(1.6), lambert(MODEL_COLORS.swarmling));
   }
   if (defId === "mothership") {
     const group = new THREE.Group();

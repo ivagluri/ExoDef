@@ -36,6 +36,8 @@ export function createHud(handlers: {
   onVolume: (volume: number) => void;
   onTestMissiles: () => void;
   onTestBoss: () => void;
+  onTestSplitter: () => void;
+  onTestSwarm: () => void;
 }): Hud {
   const hud = document.getElementById("hud")!;
   hud.innerHTML = `
@@ -188,8 +190,10 @@ export function createHud(handlers: {
       <div class="settingrow testrow">
         <span>TEST</span>
         <span class="seg">
-          <button data-el="testMissiles">TEST MISSILES</button>
-          <button data-el="testBoss">TEST BOSS</button>
+          <button data-el="testMissiles">MISSILES</button>
+          <button data-el="testBoss">BOSS</button>
+          <button data-el="testSplitter">SPLITTER</button>
+          <button data-el="testSwarm">SWARM</button>
         </span>
       </div>
     </div>
@@ -204,7 +208,7 @@ export function createHud(handlers: {
       <small data-el="victoryscore"></small>
       <small>FREEPLAY UNLOCKED</small>
     </div>
-    <div class="tag"><b>EXODEF COMMAND</b> · 1-6 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
+    <div class="tag"><b>EXODEF COMMAND</b> · 1-8 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
   `;
 
   const el = (name: string) => hud.querySelector<HTMLElement>(`[data-el="${name}"]`)!;
@@ -262,6 +266,8 @@ export function createHud(handlers: {
   press(el("speed3"), () => handlers.onSpeedValue(3));
   press(el("testMissiles"), () => handlers.onTestMissiles());
   press(el("testBoss"), () => handlers.onTestBoss());
+  press(el("testSplitter"), () => handlers.onTestSplitter());
+  press(el("testSwarm"), () => handlers.onTestSwarm());
   const volumeInput = el("volume") as HTMLInputElement;
   volumeInput.addEventListener("input", () => handlers.onVolume(Number(volumeInput.value) / 100));
 
@@ -278,6 +284,8 @@ export function createHud(handlers: {
       if (volumeInput.value !== volumeValue) volumeInput.value = volumeValue;
       setDisabled(el("testMissiles") as HTMLButtonElement, state.phase === "gameover" || state.volley !== null);
       setDisabled(el("testBoss") as HTMLButtonElement, state.phase === "gameover");
+      setDisabled(el("testSplitter") as HTMLButtonElement, state.phase === "gameover");
+      setDisabled(el("testSwarm") as HTMLButtonElement, state.phase === "gameover");
       const bestScore = Math.max(settings.highScore ?? 0, state.score);
       if (coord.active) {
         // §11.3: ammo pips, auto-pick flight time, inbound count, click-pair readiness
@@ -406,6 +414,16 @@ function tierSummary(tier: TowerTier, defId: string, prev?: TowerTier): string {
     parts.push(delta("DRONES", tier.drone.count, prev?.drone?.count));
     parts.push(delta("DPS", Number(((tier.drone.damage / tier.drone.period) * tier.drone.count).toFixed(1)), prev?.drone && Number(((prev.drone.damage / prev.drone.period) * prev.drone.count).toFixed(1))));
     parts.push(delta("SPD", tier.drone.speed, prev?.drone?.speed));
+    parts.push(delta("RNG", tier.rangeRadius, prev?.rangeRadius));
+  } else if (tier.cloud) {
+    parts.push(delta("DPS", tier.cloud.dps, prev?.cloud?.dps));
+    parts.push(delta("CLOUD", tier.cloud.cloudRadius, prev?.cloud?.cloudRadius));
+    parts.push(delta("DUR", tier.cloud.cloudDuration, prev?.cloud?.cloudDuration));
+    parts.push(delta("RATE", Number((1 / tier.cloud.period).toFixed(2)), prev?.cloud && Number((1 / prev.cloud.period).toFixed(2))));
+  } else if (tier.hack) {
+    parts.push(delta("COOLDOWN", tier.hack.cooldown, prev?.hack?.cooldown));
+    parts.push(delta("DMG", tier.hack.damage, prev?.hack?.damage));
+    parts.push(delta("AOE", tier.hack.aoeRadius, prev?.hack?.aoeRadius));
     parts.push(delta("RNG", tier.rangeRadius, prev?.rangeRadius));
   }
   return parts.join(" · ");

@@ -1,12 +1,12 @@
 import { CORE_HP, ECONOMY, SCORE, WAVE_GOAL } from "../balance";
 import { UFO } from "../content/enemies";
-import { spawnGruntGroup, updateGroups } from "./enemies";
+import { spawnGruntGroup, spawnSwarmGroup, updateGroups } from "./enemies";
 import { launchVolley, updateInterceptors, updateWarheads } from "./missiles";
-import { spawnBomber, spawnDiver, spawnMothership, spawnUfo, updateBombs, updateRaiders } from "./raiders";
+import { spawnBomber, spawnDiver, spawnMothership, spawnSplitter, spawnUfo, updateBombs, updateRaiders } from "./raiders";
 import { rand } from "./rng";
 import { coresAlive, toast, type GameState } from "./state";
-import { updateAAMissiles, updateDrones, updateShells, updateTowers } from "./towers";
-import { representativeBossHpScale, representativeMissilesForRound, waveDef, waveSpawns } from "./waves";
+import { updateAAMissiles, updateClouds, updateDrones, updateShells, updateTowers } from "./towers";
+import { representativeBossHpScale, representativeHpScale, representativeMissilesForRound, waveDef, waveSpawns } from "./waves";
 
 // Round flow (GAME-DESIGN.md §3): build freely → START ROUND → combat (building
 // still allowed) → wave clear → core income → build. Player-paced.
@@ -38,8 +38,10 @@ function spawnPending(state: GameState): void {
     const entry = state.pending.shift()!;
     const hp = entry.hpScale ?? 1;
     if (entry.enemy === "grunt") spawnGruntGroup(state, entry.count, hp, entry.speedScale ?? 1);
+    else if (entry.enemy === "swarm") spawnSwarmGroup(state, entry.count, hp, entry.speedScale ?? 1);
     else if (entry.enemy === "bomber") for (let i = 0; i < entry.count; i++) spawnBomber(state, hp);
     else if (entry.enemy === "diver") for (let i = 0; i < entry.count; i++) spawnDiver(state, hp);
+    else if (entry.enemy === "splitter") for (let i = 0; i < entry.count; i++) spawnSplitter(state, hp);
     else if (entry.enemy === "ufo") spawnUfo(state, hp);
     else if (entry.enemy === "mothership") for (let i = 0; i < entry.count; i++) spawnMothership(state, hp);
   }
@@ -49,6 +51,7 @@ function checkRoundClear(state: GameState): void {
   if (state.pending.length > 0 || state.enemies.length > 0 || state.bombs.length > 0) return;
   if (state.volley !== null) return; // volley still inbound (§6: round continues)
   state.phase = "build";
+  for (const core of state.cores) core.swarmCharge = 0; // charges don't carry between rounds [tunable]
   if (state.testCombat) {
     state.testCombat = false;
     toast(state, "TEST THREATS CLEARED", 2);
@@ -109,11 +112,35 @@ export function triggerTestBoss(state: GameState): boolean {
   return true;
 }
 
+export function triggerTestSplitter(state: GameState): boolean {
+  if (!beginTestCombat(state)) return false;
+  const scale = representativeHpScale(state.round);
+  spawnSplitter(state, scale);
+  spawnSplitter(state, scale);
+  toast(state, "TEST SPLITTERS — 2 INBOUND", 2.5);
+  return true;
+}
+
+export function triggerTestSwarm(state: GameState): boolean {
+  if (!beginTestCombat(state)) return false;
+  spawnSwarmGroup(state, 14, representativeHpScale(state.round));
+  toast(state, "TEST SWARM — CLUSTER INBOUND", 2.5);
+  return true;
+}
+
 function ageEffects(state: GameState, dt: number): void {
   for (const t of state.effects.tracers) t.ttl -= dt;
   for (const b of state.effects.blasts) b.ttl -= dt;
+  for (const r of state.effects.repulseBeams) r.ttl -= dt;
+  for (const h of state.effects.hackBeams) h.ttl -= dt;
   state.effects.tracers = state.effects.tracers.filter((t) => t.ttl > 0);
   state.effects.blasts = state.effects.blasts.filter((b) => b.ttl > 0);
+  const beamAlive = (b: { ttl: number; enemyId: number; towerId: number }) =>
+    b.ttl > 0 &&
+    state.enemies.some((e) => e.id === b.enemyId && e.alive) &&
+    state.towers.some((t) => t.id === b.towerId && t.alive);
+  state.effects.repulseBeams = state.effects.repulseBeams.filter(beamAlive);
+  state.effects.hackBeams = state.effects.hackBeams.filter(beamAlive);
 }
 
 export function simTick(state: GameState, dt: number): void {
@@ -126,6 +153,7 @@ export function simTick(state: GameState, dt: number): void {
   updateInterceptors(state, dt);
   updateAAMissiles(state, dt);
   updateDrones(state, dt);
+  updateClouds(state, dt);
   if (state.phase !== "combat") return;
 
   state.roundTime += dt;

@@ -11,9 +11,9 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phase 6 COMPLETE — live playtest looks good; capture feedback before choosing the next phase** (updated 2026-07-07)
+**Status: Phase 7 BUILT — awaiting user browser playtest; Phase 8 shortlist recorded (mines + blockade + paired enemies); balance pass remains the queued follow-up** (updated 2026-07-07)
 
-> **Resume here (fresh context):** read `GAME-DESIGN.md` first, then this section. The current build is pushed through commit `9912d35` on `main`: complete wave-50/freeplay arc, boss stages, audio/settings/high score, readability pass, core/platform terminology, plotted-only missile interception, six-tower roster, and paid damaged-core repair. The latest live feedback says playtest is looking good after Phase 6 fixes. Do not assume a Phase 7 exists yet; first gather any remaining playtest notes and ask/plan before starting a new feature or balance phase.
+> **Resume here (fresh context):** read `GAME-DESIGN.md` first, then this section. The current build: complete wave-50/freeplay arc, boss stages, audio/settings/high score, plotted-only missile interception, **eight-tower roster** (Phase 7 added Napalm Clouder + Aerial Hack Array), **seven enemy types** (Phase 7 added Splitter + Swarm Cluster, debuting waves 12/14 and woven into the 16+ formula), and paid damaged-core repair. Phase 7 came from a design interview (towers lead, enemies designed as threats those towers answer). Next: user playtest of Phase 7, then either fixes, the Phase 8 roster shortlist, or the long-deferred balance pass — ask the user.
 
 ### Next Agent Checklist
 
@@ -99,7 +99,7 @@ Everything in GAME-DESIGN.md §6/§7, plus the 2026-07-07 playtest-review additi
 
 **DoD:** complete game per design doc, playable start → wave 50 → freeplay.
 
-## Phase 6 — Roster expansion & core repair
+## Phase 6 — Roster expansion & core repair ✅ (2026-07-07)
 
 Roster stabilization before serious balance tuning. Adds low-risk tower concepts from the preserved backlog plus an explicit damaged-core repair action.
 
@@ -113,6 +113,22 @@ Roster stabilization before serious balance tuning. Adds low-risk tower concepts
 
 **Live playtest status:** looking good after AA Missile Strongest default, drone separation, and missile-orientation fixes. No blocking Phase 6 issue is currently recorded.
 
+## Phase 7 — Roster expansion II: area denial & conversion
+
+Design interview 2026-07-07 (user direction: **towers lead, enemies designed as threats those towers answer**; scope split into two phases to keep changes small).
+
+- [x] Napalm Clouder tower: auto-lobbed canister → lingering chip-damage cloud (~6–8s, tier-scaled radius/DPS/rate); never affects warheads
+- [x] Aerial Hack Array tower: converts one invader (never mothership) into a one-run kamikaze vs the closest other invader; self-destructs if alone; hacked unit pays no bounty, its kills pay normal bounty; defaults to Strongest targeting; holds fire unless ≥2 targets
+- [x] Splitter enemy: weaving solo descender; bursts into 4 fast-falling fragments on kill OR at y≈20 intact (fragment phase never skippable)
+- [x] Swarm Cluster enemy: 12–16 swarmlings on the grunt group system with denser/faster params; tower kills as usual, cores take 1 hit per 3 nearby landings (pips above core; charge resets at round end)
+- [x] Wave integration: splitter debut wave 12, swarm debut wave 14, both in the 16–50 formula mix and freeplay
+- [x] Eight-slot build bar (hotkeys 7/8), upgrade-preview deltas for cloud/hack, TEST SPLITTER / TEST SWARM settings buttons
+- [x] Smoke: Phase 7 mechanic assertions + auto-player buys napalm/hack; full run clears wave 50 with 6/6 cores
+
+**DoD:** new towers buildable/upgradable, new enemies spawn in their debut waves and formula mix, warhead interception remains purely player-plotted, `npm run build` + `npm run smoke` pass. **User browser playtest decides follow-up fixes.**
+
+**Phase 8 shortlist (user-picked, not yet scoped):** Orbital Mine Launcher + Blockade Launcher towers, paired with tower-hunter drone (user idea) and shielded tank enemies.
+
 ---
 
 ## Known issues
@@ -121,6 +137,8 @@ Roster stabilization before serious balance tuning. Adds low-risk tower concepts
 
 ## Recently Fixed
 
+- ~~**Hack array had no visible firing effect** (user playtest 2026-07-07)~~ **FIXED 2026-07-07**: added a conversion crackle — three jagged electric arcs (cyan + violet) from the antenna tips to the converted unit, re-jittered at ~24 Hz with per-arc flicker/wink-out, ~0.7s (`effects.hackBeams`). Deliberately unlike the repulsor's smooth cone per user direction.
+- ~~**Repulsor tower had no visible effect** (user playtest 2026-07-07)~~ **FIXED 2026-07-07**: the old visual was a 1px line for 0.22s, invisible among gun tracers. Replaced with a sustained transparent cone beam (wifi-signal shape, narrow at dish → flaring at target) that tracks the lifted enemy for the full debuff duration, with an opacity pulse.
 - ~~**HUD buttons unresponsive** (user playtest 2026-07-07)~~ **FIXED 2026-07-07** with Phase 4: HUD buttons now fire on `pointerdown` and `hud.update()` only mutates the DOM when values actually change.
 - ~~**AA Missile felt weak by default**~~ **FIXED 2026-07-07**: new AA Missile towers default to Strongest targeting while remaining toggleable.
 - ~~**Drones visually stack**~~ **FIXED 2026-07-07**: simple drone separation keeps capped drones from sitting inside each other.
@@ -155,3 +173,5 @@ Historical notes below are preserved for context. Any old "resume here" text ins
 - **2026-07-07 (aiming simplification)** — Removed the plot+commit/SPACE firing scheme after user playtest found base-speed gameplay too quick for a separate confirm step. Coordinate view now always uses plotted side+top click pairs; settings/localStorage no longer carry a fire scheme; HUD/docs updated.
 - **2026-07-07 (Phase 6 roster expansion)** — Closed Phase 5 cut-line and moved balance tuning to backlog until the roster stabilizes. Added Repulsor Beam (upward-retreat debuff applicator), AA Missile (automatic anti-invader guided missiles, never warheads), Drone Launcher (persistent capped drones), paid damaged-core repair ($300, surviving cores only), six-tower build bar, and hover-rotating tower-model picker previews. Expanded smoke with Phase 6 mechanic assertions. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cores.
 - **2026-07-07 (Phase 6 playtest fixes)** — AA Missile towers now default to Strongest targeting while remaining toggleable; drones get simple visual separation so capped drone groups do not stack inside each other; AA missile models orient nose-first toward targets instead of tumbling.
+- **2026-07-07 (repulsor beam visibility)** — User playtest: game plays well overall; balance tweaks are the acknowledged next area, but first the repulsor tower had no visible effect. Replaced the old 0.22s 1px tracer line with a sim-tracked `effects.repulseBeams` entry (towerId/enemyId/ttl) rendered as a sustained transparent cone beam (per user direction: "wifi signal" look) from dish to lifted enemy for the full debuff duration, pulsing, with fade in/out; beam drops if the tower or target dies. Phase 6 marked ✅. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cores.
+- **2026-07-07 (Phase 7 roster expansion II)** — Grill-me design interview set direction (towers lead; two-phase split; napalm+hack first, mines+blockade to Phase 8) then implemented: napalm clouds (`Shell.cloud` payload → `state.clouds`, `updateClouds` in `towers.ts`), hack kamikazes (`Enemy.hacked`, driven in `raiders.ts`, bounty rules in `killEnemy`), splitter/fragments (`raiders.ts` + `spawnFragments` in `enemies.ts`), swarm clusters (grunt group system parameterized by `variant`, swarm landings charge cores — `Core.swarmCharge`, reset at round end), waves 12/14 debuts + formula weights in `balance.ts`/`waves.ts`, models/cloud blobs/hacked cyan tint/core pips in render, 8-slot build bar, TEST SPLITTER/SWARM buttons, smoke Phase 7 assertions. `npm run build` clean; `npm run smoke` clears wave 50 with 6/6 cores. Awaiting user playtest.

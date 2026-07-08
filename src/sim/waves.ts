@@ -14,6 +14,8 @@ const g = (at: number, count: number): PendingSpawn => ({ at, enemy: "grunt", co
 const b = (at: number, count = 1): PendingSpawn => ({ at, enemy: "bomber", count });
 const d = (at: number, count: number): PendingSpawn => ({ at, enemy: "diver", count });
 const m = (at: number, hpScale: number): PendingSpawn => ({ at, enemy: "mothership", count: 1, hpScale });
+const sp = (at: number, count: number): PendingSpawn => ({ at, enemy: "splitter", count });
+const sw = (at: number, count: number): PendingSpawn => ({ at, enemy: "swarm", count });
 
 const AUTHORED_WAVES: WaveDef[] = [
   { spawns: [g(1, 6)] },
@@ -27,9 +29,11 @@ const AUTHORED_WAVES: WaveDef[] = [
   { spawns: [g(1, 6), g(8, 6), b(10)], missiles: { warheads: 3 } },
   { spawns: [g(1, 8), g(6, 8), g(12, 8), b(6), b(12), b(18), d(20, 3)] },
   { spawns: [g(1, 7), g(6, 7), g(11, 6), b(8), b(16), d(10, 2), d(18, 2)] },
-  { spawns: [g(1, 6), g(7, 6), g(13, 6), b(8), b(14), b(20)], missiles: { warheads: 3 } },
+  // wave 12: splitter debut (Phase 7 — one new thing at a time)
+  { spawns: [g(1, 6), g(7, 6), g(13, 6), b(8), b(14), b(20), sp(10, 2)], missiles: { warheads: 3 } },
   { spawns: [g(1, 7), g(5, 7), g(10, 7), g(15, 7), b(8), b(12), b(18), b(24), d(20, 4)] },
-  { spawns: [g(1, 8), g(6, 8), g(12, 8), b(6), b(12), b(18), b(24), d(10, 3), d(20, 3)] },
+  // wave 14: swarm cluster debut (Phase 7)
+  { spawns: [g(1, 8), g(6, 8), g(12, 8), b(6), b(12), b(18), b(24), d(10, 3), d(20, 3), sw(8, 14)] },
   { spawns: [m(1, WAVE_SCALING.bossHpScaleWave15)], missiles: { warheads: 4, counterforce: true } },
 ];
 
@@ -199,8 +203,32 @@ function generatedWave(round: number): WaveDef {
   scheduleGrunts(spawns, grunts, round, spread, hp, gruntSpeedScale(round));
   scheduleEnemy(spawns, "bomber", bombers, round, spread * 0.78, 6, hp);
   scheduleEnemy(spawns, "diver", divers, round, spread * 0.9, 10, hp);
+
+  // Phase 7 roster (§9): splitters every formula wave, swarm clusters on
+  // alternating waves — both keep growing into freeplay.
+  const step = round - WAVE_SCALING.formulaBaseRound;
+  const splitters = WAVE_SCALING.formulaBaseSplitters
+    + Math.floor(step / WAVE_SCALING.formulaSplitterEveryWaves)
+    + Math.floor(freeplayStep(round) / 3);
+  scheduleEnemy(spawns, "splitter", splitters, round, spread * 0.85, 4, hp);
+  if (round >= WAVE_SCALING.swarmEveryOtherWaveFrom && (round - WAVE_SCALING.swarmEveryOtherWaveFrom) % 2 === 0) {
+    const swarmGroups = 1 + Math.floor(step / WAVE_SCALING.swarmExtraGroupEveryWaves);
+    const size = Math.min(
+      WAVE_SCALING.swarmSizeMax,
+      WAVE_SCALING.swarmBaseSize + Math.floor(step / WAVE_SCALING.swarmSizeGrowthEveryWaves),
+    );
+    for (let i = 0; i < swarmGroups; i++) {
+      spawns.push({ at: 3 + i * 7 + noise(round, 40 + i) * spread * 0.3, enemy: "swarm", count: size, hpScale: hp });
+    }
+  }
+
   spawns.sort((a, b2) => a.at - b2.at);
   return { spawns, missiles: missileDef(round) };
+}
+
+/** Representative per-enemy HP scale for the settings-panel test spawns. */
+export function representativeHpScale(round: number): number {
+  return hpScale(Math.max(1, round));
 }
 
 export function waveDef(round: number): WaveDef | null {

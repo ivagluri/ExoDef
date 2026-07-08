@@ -17,6 +17,10 @@ export interface TowerTier {
   guided?: { damage: number; period: number; speed: number };
   /** persistent reusable drones maintained by the tower */
   drone?: { count: number; damage: number; period: number; speed: number; attackRange: number };
+  /** napalm: lobbed canister bursts into a lingering chip-damage cloud; never affects warheads */
+  cloud?: { period: number; shellSpeed: number; dps: number; cloudRadius: number; cloudDuration: number };
+  /** hack array: converts one invader into a kamikaze that rams the closest other invader; mothership immune */
+  hack?: { cooldown: number; kamikazeSpeed: number; damage: number; aoeRadius: number };
 }
 
 export interface TowerDef {
@@ -107,8 +111,34 @@ export const TOWER_DEFS: Record<string, TowerDef> = {
       { upgradeCost: 620, rangeRadius: 160, maxAltitude: 155, drone: { count: 3, damage: 5, period: 0.45, speed: 50, attackRange: 15 } },
     ],
   },
+  napalm: {
+    id: "napalm",
+    name: "NAPALM",
+    cost: 350,
+    hotkey: "7",
+    role: "aoe",
+    // Area denial: clouds melt lingerers (swarm clusters, splitter fragments,
+    // the slow-sinking mothership). Low reach — this is a landing-zone tool.
+    tiers: [
+      { upgradeCost: 0, rangeRadius: 70, maxAltitude: 60, cloud: { period: 6, shellSpeed: 70, dps: 12, cloudRadius: 14, cloudDuration: 6 } },
+      { upgradeCost: 300, rangeRadius: 78, maxAltitude: 70, cloud: { period: 5, shellSpeed: 75, dps: 16, cloudRadius: 17, cloudDuration: 7 } },
+      { upgradeCost: 560, rangeRadius: 86, maxAltitude: 80, cloud: { period: 4.2, shellSpeed: 80, dps: 22, cloudRadius: 20, cloudDuration: 8 } },
+    ],
+  },
+  hack: {
+    id: "hack",
+    name: "HACK ARRAY",
+    cost: 500,
+    hotkey: "8",
+    role: "control",
+    tiers: [
+      { upgradeCost: 0, rangeRadius: 90, maxAltitude: 130, hack: { cooldown: 9, kamikazeSpeed: 34, damage: 60, aoeRadius: 10 } },
+      { upgradeCost: 420, rangeRadius: 100, maxAltitude: 140, hack: { cooldown: 7, kamikazeSpeed: 40, damage: 90, aoeRadius: 12 } },
+      { upgradeCost: 760, rangeRadius: 110, maxAltitude: 155, hack: { cooldown: 5.5, kamikazeSpeed: 46, damage: 130, aoeRadius: 14 } },
+    ],
+  },
   // "radar" is backlog; the persistent HUD radar covers the v1 readability need.
 };
 
 /** Towers available on the build bar this phase. */
-export const BUILDABLE = ["gun", "flak", "battery", "repulsor", "aaMissile", "drone"] as const;
+export const BUILDABLE = ["gun", "flak", "battery", "repulsor", "aaMissile", "drone", "napalm", "hack"] as const;

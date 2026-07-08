@@ -12,6 +12,8 @@ export interface Core {
   index: number;
   pos: THREE.Vector3;
   hp: number; // CORE_HP → damaged at 1 → destroyed at 0
+  /** swarm landings accumulate here; every SWARM.landingsPerCoreHit-th = 1 hit (§5) */
+  swarmCharge: number;
 }
 
 export interface Tower {
@@ -52,6 +54,8 @@ export interface Enemy {
   groupId: number | null;
   ai?: EnemyAI;
   repulse?: { ttl: number; liftSpeed: number };
+  /** hack array conversion: one kamikaze run at the closest other invader */
+  hacked?: { targetId: number | null; speed: number; damage: number; aoeRadius: number };
 }
 
 export interface Bomb {
@@ -62,6 +66,8 @@ export interface Bomb {
 
 export interface GruntGroup {
   id: number;
+  /** movement/landing parameter set: grunt formation or swarm cluster (§5) */
+  variant: "grunt" | "swarm";
   y: number;
   anchorX: number;
   anchorZ: number;
@@ -81,6 +87,17 @@ export interface Shell {
   damage: number;
   aoeRadius: number;
   alive: boolean;
+  /** napalm canister: bursts into a lingering cloud instead of an instant blast */
+  cloud?: { radius: number; duration: number; dps: number };
+}
+
+/** Lingering napalm cloud: chip DPS to enemies inside; never touches warheads. */
+export interface Cloud {
+  pos: THREE.Vector3;
+  radius: number;
+  ttl: number;
+  maxTtl: number;
+  dps: number;
 }
 
 export interface AAMissile {
@@ -105,8 +122,12 @@ export interface Drone {
 export type BlastKind = "flak" | "impact" | "bossBay";
 
 export interface Effects {
-  tracers: { from: THREE.Vector3; to: THREE.Vector3; ttl: number; kind?: "gun" | "repulsor" | "drone" }[];
+  tracers: { from: THREE.Vector3; to: THREE.Vector3; ttl: number; kind?: "gun" | "drone" }[];
   blasts: { pos: THREE.Vector3; radius: number; ttl: number; maxTtl: number; kind?: BlastKind }[];
+  /** sustained repulsor beam, tracks the lifted enemy for the debuff duration */
+  repulseBeams: { towerId: number; enemyId: number; ttl: number; maxTtl: number }[];
+  /** hack-array conversion crackle: three electric arcs, antenna tips → converted unit */
+  hackBeams: { towerId: number; enemyId: number; ttl: number; maxTtl: number }[];
 }
 
 /** Ballistic warhead on a precomputed quadratic bézier arc (§6.1/§7.3 —
@@ -175,6 +196,7 @@ export interface GameState {
   enemies: Enemy[];
   groups: GruntGroup[];
   shells: Shell[];
+  clouds: Cloud[];
   aaMissiles: AAMissile[];
   drones: Drone[];
   bombs: Bomb[];
@@ -206,6 +228,7 @@ export function createGameState(): GameState {
       index,
       pos: new THREE.Vector3(x, 0, z),
       hp: CORE_HP,
+      swarmCharge: 0,
     })),
     // The free T1 battery, pre-placed at map center — dormant until the first
     // volley, unsellable (§2/§3, 2026-07-07 review).
@@ -223,6 +246,7 @@ export function createGameState(): GameState {
     enemies: [],
     groups: [],
     shells: [],
+    clouds: [],
     aaMissiles: [],
     drones: [],
     bombs: [],
@@ -231,7 +255,7 @@ export function createGameState(): GameState {
     interceptors: [],
     interceptBlasts: [],
     batteryAwake: false,
-    effects: { tracers: [], blasts: [] },
+    effects: { tracers: [], blasts: [], repulseBeams: [], hackBeams: [] },
     nextId: 2,
     message: "",
     messageTtl: 0,

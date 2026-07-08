@@ -24,7 +24,7 @@ function pickTarget(
   let best: Enemy | null = null;
   let bestKey = Infinity;
   for (const enemy of state.enemies) {
-    if (!enemy.alive) continue;
+    if (!enemy.alive || enemy.hacked) continue; // hacked units fight for us now
     if (!predicate(enemy)) continue;
     const hull = enemyHull(enemy);
     if (enemy.pos.y - hull > maxAlt) continue;
@@ -64,11 +64,11 @@ function applyRepulse(state: GameState, tower: Tower, enemy: Enemy, duration: nu
       enemy.ai.timer = 0;
     }
   }
-  state.effects.tracers.push({
-    from: tower.pos.clone().setY(MUZZLE_HEIGHT + 3),
-    to: enemy.pos.clone(),
-    ttl: 0.22,
-    kind: "repulsor",
+  state.effects.repulseBeams.push({
+    towerId: tower.id,
+    enemyId: enemy.id,
+    ttl: duration,
+    maxTtl: duration,
   });
 }
 
@@ -125,8 +125,66 @@ export function updateTowers(state: GameState, dt: number): void {
         damage: tier.guided.damage,
         alive: true,
       });
+    } else if (tier.cloud) {
+      // napalm: lobbed canister → lingering chip-damage cloud at the target point
+      tower.cooldown = tier.cloud.period;
+      state.shells.push({
+        id: state.nextId++,
+        pos: tower.pos.clone().setY(MUZZLE_HEIGHT),
+        target: target.pos.clone(),
+        speed: tier.cloud.shellSpeed,
+        damage: 0,
+        aoeRadius: 0,
+        alive: true,
+        cloud: { radius: tier.cloud.cloudRadius, duration: tier.cloud.cloudDuration, dps: tier.cloud.dps },
+      });
+    } else if (tier.hack) {
+      // hack array: convert one invader into a one-run kamikaze (§4/§5).
+      // Needs a second enemy to ram — don't waste the cooldown on a lone target.
+      const others = state.enemies.filter((e) => e.alive && !e.hacked).length;
+      if (others < 2) continue;
+      const hackTarget = pickTarget(
+        state,
+        tower,
+        tier.rangeRadius,
+        tier.maxAltitude,
+        (enemy) => enemy.defId !== "mothership",
+      );
+      if (!hackTarget) continue;
+      tower.cooldown = tier.hack.cooldown;
+      hackTarget.hacked = {
+        targetId: null,
+        speed: tier.hack.kamikazeSpeed,
+        damage: tier.hack.damage,
+        aoeRadius: tier.hack.aoeRadius,
+      };
+      // grouped grunts leave their formation when converted
+      if (hackTarget.groupId !== null) {
+        const group = state.groups.find((g) => g.id === hackTarget.groupId);
+        if (group) group.members = group.members.filter((m) => m.enemyId !== hackTarget.id);
+        hackTarget.groupId = null;
+      }
+      state.effects.blasts.push({ pos: hackTarget.pos.clone(), radius: 5, ttl: 0.3, maxTtl: 0.3, kind: "bossBay" });
+      state.effects.hackBeams.push({ towerId: tower.id, enemyId: hackTarget.id, ttl: 0.7, maxTtl: 0.7 });
     }
   }
+}
+
+/** Napalm clouds (§4): chip DPS to every invader inside; warheads untouched
+ *  by construction (clouds only ever scan state.enemies). */
+export function updateClouds(state: GameState, dt: number): void {
+  for (const cloud of state.clouds) {
+    cloud.ttl -= dt;
+    for (const enemy of state.enemies) {
+      if (!enemy.alive) continue;
+      const dist = Math.max(0, cloud.pos.distanceTo(enemy.pos) - enemyHull(enemy));
+      if (dist > cloud.radius) continue;
+      enemy.hp -= cloud.dps * dt;
+      if (enemy.hp <= 0) killEnemy(state, enemy);
+    }
+  }
+  state.clouds = state.clouds.filter((c) => c.ttl > 0);
+  state.enemies = state.enemies.filter((e) => e.alive);
 }
 
 export function updateShells(state: GameState, dt: number): void {
@@ -136,6 +194,17 @@ export function updateShells(state: GameState, dt: number): void {
     const step = shell.speed * dt;
     if (toTarget.length() <= step) {
       shell.alive = false;
+      if (shell.cloud) {
+        // napalm canister: ignite a lingering cloud instead of an instant blast
+        state.clouds.push({
+          pos: shell.target.clone(),
+          radius: shell.cloud.radius,
+          ttl: shell.cloud.duration,
+          maxTtl: shell.cloud.duration,
+          dps: shell.cloud.dps,
+        });
+        continue;
+      }
       state.effects.blasts.push({
         pos: shell.target.clone(),
         radius: shell.aoeRadius,

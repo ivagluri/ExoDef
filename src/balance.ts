@@ -85,6 +85,14 @@ export const WAVE_SCALING = {
   freeplayVolleyFirstRound: 52,
   freeplayVolleyGapPattern: [2, 3] as const,
   counterforceChance: 0.25,
+  // Phase 7 roster in the formula mix (§9) [tunable]
+  formulaBaseSplitters: 1,
+  formulaSplitterEveryWaves: 6, // +1 splitter per this many waves past 15
+  swarmEveryOtherWaveFrom: 17, // swarm clusters on 17, 19, 21, …
+  swarmBaseSize: 12,
+  swarmSizeGrowthEveryWaves: 3,
+  swarmSizeMax: 20,
+  swarmExtraGroupEveryWaves: 12,
   bossHpScaleWave15: 1,
   bossHpScaleWave30: 1.75,
   bossHpScaleWave45: 2.5,
