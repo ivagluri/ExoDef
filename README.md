@@ -21,7 +21,7 @@ Read these first:
 - `BUILD-PLAN.md` — current phase tracker, latest status, next-agent checklist, session log.
 - `GAME-DESIGN.md` — buildable gameplay spec and backlog.
 
-Current resume state: Phases 7–8 are built and awaiting user browser playtest — the roster is complete at ten towers (Phase 7: napalm + hack array with splitter + swarm enemies; Phase 8: blockade launcher + one-shot nuke). The user has declared roster expansion done; the **balance pass** is the agreed next phase (economy generosity, stronger-enemy volume, per-tower tuning — see BUILD-PLAN backlog notes).
+Current resume state: everything through the small-screen/UX pass is committed and pushed (`6bc06b1`). The roster is complete and frozen at ten towers (Phase 7: napalm + hack array with splitter + swarm enemies; Phase 8: blockade launcher + one-shot nuke), playtested on desktop and the iPhone SE simulator. The **balance pass** is the agreed next phase — economy generosity, stronger-enemy volume, per-tower tuning (see BUILD-PLAN status + backlog notes); interview the user for targets before changing numbers.
 
 ## Guardrails
 

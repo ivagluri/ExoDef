@@ -425,7 +425,7 @@ HP × `1.06^(wave−50)`, counts +10%/wave, volley every 2–3 waves, warhead ca
 | Q / E, or right-drag | Orbit map camera |
 | Scroll | Zoom step |
 | 1–0 | Select tower type for placement (gun / flak / battery / repulsor / AA missile / drone / napalm / hack array / blockade / nuke) |
-| ESC | Cancel placement / close panel |
+| ESC, or right-click | Full deselect: cancel placement + close the tower/core panel (2026-07-07 UX pass) |
 | ENTER | Start next round |
 | X (or HUD button) | Toggle 3× fast-forward **[tunable]** (2026-07-07 playtest QoL; auto-resets to 1× when a volley launches — the siren moment is never fast-forwarded) |
 
@@ -454,7 +454,8 @@ Gamepad: out of scope v1 (backlog §14).
 
 ### 11.2 Build & upgrade flow
 
-- Click build-bar tower (or 1–6) → ghost follows cursor with **range dome** (translucent sphere cap showing radius + altitude ceiling). Green = valid, red = invalid. Click to place, ESC cancels.
+- Click build-bar tower (or 1–0) → ghost follows cursor with **range dome** (translucent sphere cap showing radius + altitude ceiling). Green = valid, red = invalid. Click to place, ESC/right-click/✕ CANCEL button cancels.
+- **Small-screen behavior (2026-07-07 UX pass):** the build bar collapses via a ▲/▼ BUILD toggle and auto-hides while placing (a red ✕ CANCEL button stands in); the bottom bar is two pinned lines (picker above, controls anchored below); the tower/core panel pops over the radar at the top on ≤640px screens; placement mode and the info panel are mutually exclusive.
 - Placement invalid: overlapping core, tower, or map edge. Everything else is open ground (free placement — layout is the strategy).
 - Click a placed tower → panel: tier, upgrade button + cost, sell (70%), targeting priority cycle.
 - Click a surviving core → panel: status/HP and repair button. Repair costs $300 and only works on damaged cores (1 HP), not destroyed cores.
