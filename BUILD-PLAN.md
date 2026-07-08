@@ -139,6 +139,22 @@ User direction 2026-07-07: two more towers (hotkeys 9/0), then balance. Orbital 
 
 **DoD:** both towers buildable, barrier visibly protects a core, nuke fires from the panel with its trade-off intact, `npm run build` + `npm run smoke` pass. **User browser playtest decides follow-up fixes; the balance pass is next.**
 
+## Phase 9 — Balance pass (NEXT — not started)
+
+The agreed next phase (user, 2026-07-07). **Build the measuring tools before touching any numbers.**
+
+- [ ] **Scenario harness first** (user request 2026-07-07): a headless runner (`scripts/scenarios.ts`, e.g. `npm run scenarios`) that reuses the smoke auto-player but parameterizes the strategy, so number changes can be sanity-checked in seconds without playing. Per scenario report: furthest wave reached, cores lost (and when), cash floor/surplus curve, towers lost. Compact comparison table across all scenarios in one run. Scenario set to start with:
+  - **Mono-tower runs** — the player buys ONLY one tower type (plus the free central battery, interception still auto-played) for each of the 8 combat/support towers. No mono strategy should cruise to wave 50; each should have a visible failure mode.
+  - **No-upgrades run** — T1 spam only: how far does breadth-without-depth get?
+  - **No-interception run** — plays the ground war but never fires interceptors: should fail fast around the first volleys (sanity check that missiles matter).
+  - **Current smoke build** — the existing mixed strategy as the baseline.
+  - **Economy probe** — track cash surplus per round on the baseline; the "too generous" claim becomes a number.
+- [ ] Interview the user for felt playtest targets (what's boring, what's mandatory, what never gets bought) before changing numbers
+- [ ] Tune economy (income/bounties/costs together), stronger-enemy volume as stages progress, and per-tower numbers across all ten towers — all in `src/balance.ts`/`src/content/`, re-running scenarios after each change
+- [ ] `npm run smoke` still passes end-to-end after tuning
+
+**DoD:** scenario table shows no degenerate dominant strategy, the user's felt complaints are measurably addressed, and a browser playtest confirms the feel.
+
 ---
 
 ## Known issues
