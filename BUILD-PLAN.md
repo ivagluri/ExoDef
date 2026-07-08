@@ -159,7 +159,7 @@ The agreed next phase (user, 2026-07-07). **Build the measuring tools before tou
 
 ## Known issues
 
-- No current blocking issues recorded.
+- **Blockade barriers keep floating over destroyed cores** (user, 2026-07-07, address later): a deployed barrier stays after its core dies, hovering over rubble — reads odd, though it would incidentally cover a milestone core rebuild. Suggested fix: retire the barrier when the core beneath it dies (the tower's normal rebuild then redeploys it over a live core). Implementation note: barriers only store a position, not the covered core — either match by position against dead cores or add a `coreIndex` to the `Barrier` record; the dead-tower orphan check in `updateBarriers` (`src/sim/towers.ts`) is the natural place. Pairs with the barrier visual-height backlog item.
 
 ## Recently Fixed
 
