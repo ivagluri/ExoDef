@@ -29,6 +29,7 @@ export function createHud(handlers: {
   onSell: () => void;
   onPriority: () => void;
   onRepair: () => void;
+  onFireNuke: () => void;
   onBanner: () => void;
   onSpeed: () => void;
   onSettings: () => void;
@@ -172,6 +173,7 @@ export function createHud(handlers: {
       <div class="stats" data-el="pstats"></div>
       <button data-el="pupgrade"></button>
       <button data-el="prepair"></button>
+      <button data-el="pfire" style="border-color:#ff5a5a;color:#ff8a8a"></button>
       <button data-el="psell"></button>
       <button data-el="ppriority"></button>
     </div>
@@ -208,7 +210,7 @@ export function createHud(handlers: {
       <small data-el="victoryscore"></small>
       <small>FREEPLAY UNLOCKED</small>
     </div>
-    <div class="tag"><b>EXODEF COMMAND</b> · 1-8 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
+    <div class="tag"><b>EXODEF COMMAND</b> · 1-0 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
   `;
 
   const el = (name: string) => hud.querySelector<HTMLElement>(`[data-el="${name}"]`)!;
@@ -257,6 +259,7 @@ export function createHud(handlers: {
   press(startBtn, () => handlers.onStart());
   press(el("pupgrade"), () => handlers.onUpgrade());
   press(el("prepair"), () => handlers.onRepair());
+  press(el("pfire"), () => handlers.onFireNuke());
   press(el("psell"), () => handlers.onSell());
   press(el("ppriority"), () => handlers.onPriority());
   press(el("alertbtn"), () => handlers.onBanner());
@@ -338,10 +341,14 @@ export function createHud(handlers: {
         setText(upBtn, cost === null ? "MAX TIER" : `UPGRADE $${cost}`);
         setDisabled(upBtn, cost === null || state.cash < cost);
         setDisplay(el("prepair"), "none");
+        // the fool's gold button (§4)
+        const fireBtn = el("pfire") as HTMLButtonElement;
+        setDisplay(fireBtn, tower.defId === "nuke" ? "" : "none");
+        setText(fireBtn, "☢ FIRE NUKE");
         setDisplay(el("psell"), tower.noSell ? "none" : "");
         setText(el("psell"), `SELL +$${sellRefund(tower)}`);
-        // batteries never auto-target (§6.5) — hide the priority cycler
-        setDisplay(el("ppriority"), tower.defId === "battery" ? "none" : "");
+        // batteries never auto-target (§6.5); blockade/nuke have no targeting either
+        setDisplay(el("ppriority"), ["battery", "blockade", "nuke"].includes(tower.defId) ? "none" : "");
         setText(el("ppriority"), `TARGET: ${tower.priority.toUpperCase()}`);
       } else if (core) {
         const status =
@@ -351,6 +358,7 @@ export function createHud(handlers: {
         setText(el("ptitle"), `CORE ${core.index + 1}`);
         el("pstats").innerHTML = `<b>STATUS</b> ${status}<br><b>HP</b> ${core.hp}/${CORE_HP}`;
         setDisplay(el("pupgrade"), "none");
+        setDisplay(el("pfire"), "none");
         setDisplay(el("psell"), "none");
         setDisplay(el("ppriority"), "none");
         const repair = el("prepair") as HTMLButtonElement;
@@ -425,6 +433,14 @@ function tierSummary(tier: TowerTier, defId: string, prev?: TowerTier): string {
     parts.push(delta("DMG", tier.hack.damage, prev?.hack?.damage));
     parts.push(delta("AOE", tier.hack.aoeRadius, prev?.hack?.aoeRadius));
     parts.push(delta("RNG", tier.rangeRadius, prev?.rangeRadius));
+  } else if (tier.barrier) {
+    parts.push(delta("CHARGES", tier.barrier.hp, prev?.barrier?.hp));
+    parts.push(delta("REBUILD", tier.barrier.rebuildTime, prev?.barrier?.rebuildTime));
+    parts.push(delta("SIZE", tier.barrier.radius, prev?.barrier?.radius));
+    parts.push(delta("PLATES", tier.barrier.count, prev?.barrier?.count));
+  } else if (tier.nuke) {
+    parts.push("WIPES ALL INVADERS + YOUR TOWERS (BATTERIES SURVIVE)");
+    parts.push(delta("BOSS DMG", tier.nuke.bossDamage, prev?.nuke?.bossDamage));
   }
   return parts.join(" · ");
 }

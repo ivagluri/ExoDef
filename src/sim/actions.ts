@@ -1,5 +1,6 @@
 import { CORE_HP, ECONOMY } from "../balance";
 import { TOWER_DEFS } from "../content/towers";
+import { killEnemy } from "./enemies";
 import { toast, type GameState, type Priority, type Tower } from "./state";
 
 // Player actions on placed towers (GAME-DESIGN.md §4/§11.2): upgrade, sell,
@@ -57,6 +58,36 @@ export function cyclePriority(state: GameState, id: number): void {
   const tower = towerById(state, id);
   if (!tower) return;
   tower.priority = PRIORITY_ORDER[(PRIORITY_ORDER.indexOf(tower.priority) + 1) % PRIORITY_ORDER.length];
+}
+
+/** The fool's gold button (§4): one shot, fired from the tower panel. Vaporizes
+ *  every non-boss invader (no bounties) and falling bombs, heavily damages a
+ *  mothership, and levels every tower except batteries — including the silo.
+ *  Cores and enemy warheads are untouched (interception stays player-plotted). */
+export function fireNuke(state: GameState, id: number): void {
+  const tower = towerById(state, id);
+  if (!tower || state.phase === "gameover") return;
+  if (!TOWER_DEFS[tower.defId].tiers[tower.tier].nuke) return;
+  const bossDamage = TOWER_DEFS[tower.defId].tiers[tower.tier].nuke!.bossDamage;
+  for (const enemy of state.enemies) {
+    if (!enemy.alive) continue;
+    if (enemy.defId === "mothership") {
+      enemy.hp -= bossDamage;
+      if (enemy.hp <= 0) killEnemy(state, enemy); // a boss kill still pays
+    } else {
+      enemy.alive = false; // vaporized: no bounty, no splitter burst
+    }
+  }
+  state.enemies = state.enemies.filter((e) => e.alive);
+  state.bombs = [];
+  for (const t of state.towers) {
+    if (t.alive && TOWER_DEFS[t.defId].role !== "interceptor") t.alive = false;
+  }
+  state.effects.blasts.push(
+    { pos: tower.pos.clone().setY(30), radius: 150, ttl: 1.4, maxTtl: 1.4, kind: "impact" },
+    { pos: tower.pos.clone().setY(30), radius: 90, ttl: 0.9, maxTtl: 0.9, kind: "bossBay" },
+  );
+  toast(state, "☢ NUKE — SKIES CLEARED, DEFENSE GRID LOST", 6);
 }
 
 export function repairCore(state: GameState, index: number): void {

@@ -3,13 +3,13 @@
 // Run with:  npm run smoke
 // Extend this as phases add systems — it's the fast regression check for agents.
 import * as THREE from "three";
-import { repairCore, upgradeCost, upgradeTower } from "../src/sim/actions";
+import { fireNuke, repairCore, upgradeCost, upgradeTower } from "../src/sim/actions";
 import { killEnemy, spawnSwarmGroup, updateGroups } from "../src/sim/enemies";
 import { simTick, startRound } from "../src/sim/game";
 import { batteryTier, fireInterceptor, pickBattery, warheadPointAt } from "../src/sim/missiles";
 import { spawnSplitter, updateRaiders } from "../src/sim/raiders";
 import { coresAlive, createGameState, type GameState, type Warhead } from "../src/sim/state";
-import { updateClouds, updateDrones, updateShells, updateTowers } from "../src/sim/towers";
+import { updateBarriers, updateClouds, updateDrones, updateShells, updateTowers } from "../src/sim/towers";
 import { WAVE_COUNT } from "../src/sim/waves";
 import { ENEMY_DEFS, SPLITTER, SWARM } from "../src/content/enemies";
 import { TOWER_DEFS } from "../src/content/towers";
@@ -153,8 +153,59 @@ function runPhase7Checks(): void {
   console.log("PHASE 7 CHECKS PASS");
 }
 
+function runPhase8Checks(): void {
+  // blockade: barrier deploys over the nearest core and soaks a descending impact
+  const block = createGameState();
+  block.phase = "combat";
+  const core = block.cores[0]; // (-60, -40)
+  block.towers.push({
+    id: block.nextId++, defId: "blockade", tier: 0,
+    pos: core.pos.clone().add(new THREE.Vector3(0, 0, 15)).setY(0),
+    cooldown: 0, priority: "first", alive: true,
+  });
+  updateBarriers(block, 1 / 60);
+  assert(block.barriers.length === 1, "blockade did not deploy a barrier");
+  assert(
+    Math.hypot(block.barriers[0].pos.x - core.pos.x, block.barriers[0].pos.z - core.pos.z) < 1,
+    "barrier did not deploy over the nearest core",
+  );
+  block.enemies.push({
+    id: block.nextId++, defId: "grunt", hp: 20,
+    pos: core.pos.clone().setY(8), // descending through the plate
+    alive: true, groupId: null,
+  });
+  updateBarriers(block, 1 / 60);
+  assert(block.enemies.length === 0, "barrier did not soak the descending enemy");
+  assert(block.barriers[0].hp === 2, "barrier soak did not consume exactly one charge");
+  assert(core.hp === 2, "core took damage despite the barrier");
+
+  // nuke: wipes invaders (no bounty) and all towers except batteries; cores untouched
+  const nuke = createGameState();
+  nuke.phase = "combat";
+  const silo = { id: nuke.nextId++, defId: "nuke", tier: 0, pos: new THREE.Vector3(20, 0, 0), cooldown: 0, priority: "first" as const, alive: true };
+  const gun = { id: nuke.nextId++, defId: "gun", tier: 0, pos: new THREE.Vector3(-20, 0, 0), cooldown: 0, priority: "first" as const, alive: true };
+  nuke.towers.push(silo, gun);
+  for (let i = 0; i < 5; i++) {
+    nuke.enemies.push({
+      id: nuke.nextId++, defId: "grunt", hp: 20,
+      pos: new THREE.Vector3(i * 10, 60, 0),
+      alive: true, groupId: null,
+    });
+  }
+  const cashBefore = nuke.cash;
+  fireNuke(nuke, silo.id);
+  assert(nuke.enemies.length === 0, "nuke did not wipe the invaders");
+  assert(nuke.cash === cashBefore, "nuked invaders paid bounty — they should not");
+  assert(!gun.alive && !silo.alive, "nuke spared a non-battery tower");
+  assert(nuke.towers.find((t) => t.defId === "battery")!.alive, "nuke destroyed the hardened battery");
+  assert(coresAlive(nuke) === 6, "nuke damaged cores");
+
+  console.log("PHASE 8 CHECKS PASS");
+}
+
 runPhase6Checks();
 runPhase7Checks();
+runPhase8Checks();
 
 const state = createGameState();
 
@@ -175,6 +226,7 @@ const buildQueue: Array<[string, number, number]> = [
   ["napalm", 20, 32],
   ["hack", 62, 32],
   ["napalm", -20, -60],
+  ["blockade", -15, 55],
   ["flak", -80, -80],
   ["gun", -45, -80],
   ["flak", 45, -80],

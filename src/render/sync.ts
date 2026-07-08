@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { SWARM } from "../content/enemies";
 import type { BlastKind, GameState } from "../sim/state";
-import { makeAAMissileModel, makeBlastModel, makeBombModel, makeDroneModel, makeEnemyModel, makeInterceptorModel, makeShellModel, makeTowerModel, makeWarheadModel, MODEL_COLORS, type BlastVisual } from "./models";
+import { makeAAMissileModel, makeBarrierModel, makeBlastModel, makeBombModel, makeDroneModel, makeEnemyModel, makeInterceptorModel, makeShellModel, makeTowerModel, makeWarheadModel, MODEL_COLORS, type BlastVisual } from "./models";
 
 // Reconciles sim entity arrays with Three.js objects each frame (§13).
 // The sim owns truth; this module only mirrors it.
@@ -23,6 +23,7 @@ export class RenderSync {
   private shellObjs = new Map<number, THREE.Object3D>();
   private aaMissileObjs = new Map<number, THREE.Object3D>();
   private droneObjs = new Map<number, THREE.Object3D>();
+  private barrierObjs = new Map<number, THREE.Object3D>();
   private bombObjs = new Map<number, THREE.Object3D>();
   private warheadObjs = new Map<number, THREE.Object3D>();
   private interceptorObjs = new Map<number, THREE.Object3D>();
@@ -135,6 +136,20 @@ export class RenderSync {
       (d, obj) => {
         obj.position.copy(d.pos);
         obj.rotation.y += 0.12;
+      },
+    );
+    this.reconcile(
+      this.barrierObjs,
+      state.barriers.filter((b) => b.alive),
+      (b) => b.id,
+      () => makeBarrierModel(),
+      (b, obj) => {
+        obj.position.copy(b.pos);
+        obj.position.y = b.pos.y + Math.sin(state.simTime * 1.4 + b.id) * 0.5; // gentle hover
+        obj.scale.set(b.radius, 1, b.radius);
+        obj.rotation.y += 0.004;
+        const mesh = obj as THREE.Mesh;
+        (mesh.material as THREE.MeshBasicMaterial).opacity = 0.16 + 0.34 * (b.hp / b.maxHp);
       },
     );
     this.reconcile(

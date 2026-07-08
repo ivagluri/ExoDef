@@ -5,7 +5,7 @@ import { launchVolley, updateInterceptors, updateWarheads } from "./missiles";
 import { spawnBomber, spawnDiver, spawnMothership, spawnSplitter, spawnUfo, updateBombs, updateRaiders } from "./raiders";
 import { rand } from "./rng";
 import { coresAlive, toast, type GameState } from "./state";
-import { updateAAMissiles, updateClouds, updateDrones, updateShells, updateTowers } from "./towers";
+import { updateAAMissiles, updateBarriers, updateClouds, updateDrones, updateShells, updateTowers } from "./towers";
 import { representativeBossHpScale, representativeHpScale, representativeMissilesForRound, waveDef, waveSpawns } from "./waves";
 
 // Round flow (GAME-DESIGN.md §3): build freely → START ROUND → combat (building
@@ -154,6 +154,7 @@ export function simTick(state: GameState, dt: number): void {
   updateAAMissiles(state, dt);
   updateDrones(state, dt);
   updateClouds(state, dt);
+  updateBarriers(state, dt); // also deploys during build phase — instant feedback on purchase
   if (state.phase !== "combat") return;
 
   state.roundTime += dt;

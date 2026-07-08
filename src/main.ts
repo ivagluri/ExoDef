@@ -6,7 +6,7 @@ import { IsoCamera } from "./render/cameras";
 import { CoordinateView } from "./render/coordview";
 import { createWorld } from "./render/scene";
 import { RenderSync } from "./render/sync";
-import { cyclePriority, repairCore, sellTower, upgradeTower } from "./sim/actions";
+import { cyclePriority, fireNuke, repairCore, sellTower, upgradeTower } from "./sim/actions";
 import { simTick, startRound, triggerTestBoss, triggerTestMissiles, triggerTestSplitter, triggerTestSwarm } from "./sim/game";
 import { coresAlive, createGameState } from "./sim/state";
 import { createHud } from "./ui/hud";
@@ -98,6 +98,10 @@ const hud = createHud({
   onRepair: () => {
     audio.unlock();
     if (placement.selectedCoreIndex !== null) repairCore(state, placement.selectedCoreIndex);
+  },
+  onFireNuke: () => {
+    audio.unlock();
+    if (placement.selectedTowerId !== null) fireNuke(state, placement.selectedTowerId);
   },
   onBanner: () => {
     audio.unlock();

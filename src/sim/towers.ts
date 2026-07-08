@@ -76,6 +76,7 @@ export function updateTowers(state: GameState, dt: number): void {
   for (const tower of state.towers) {
     if (!tower.alive) continue;
     const tier = TOWER_DEFS[tower.defId].tiers[tower.tier];
+    if (tier.barrier || tier.nuke) continue; // support towers don't auto-fire
     tower.cooldown -= dt;
     if (tower.cooldown > 0) continue;
 
@@ -168,6 +169,80 @@ export function updateTowers(state: GameState, dt: number): void {
       state.effects.hackBeams.push({ towerId: tower.id, enemyId: hackTarget.id, ttl: 0.7, maxTtl: 0.7 });
     }
   }
+}
+
+const BARRIER_HEIGHT = 10;
+
+/** Blockade barriers (§4): deploy over the nearest uncovered live core in range
+ *  (or over the tower), then soak descending impacts — landings, plunges, falling
+ *  bombs — one charge each. Warheads pass through (interception stays player-plotted). */
+export function updateBarriers(state: GameState, dt: number): void {
+  // maintain: each blockade tower builds toward its barrier cap
+  for (const tower of state.towers) {
+    if (!tower.alive) continue;
+    const spec = TOWER_DEFS[tower.defId].tiers[tower.tier].barrier;
+    if (!spec) continue;
+    const owned = state.barriers.filter((b) => b.alive && b.towerId === tower.id);
+    if (owned.length >= spec.count) {
+      tower.barrierTimer = spec.rebuildTime; // next one is ready the moment a slot opens
+      continue;
+    }
+    tower.barrierTimer = (tower.barrierTimer ?? spec.rebuildTime) + dt;
+    if (tower.barrierTimer < spec.rebuildTime) continue;
+    tower.barrierTimer = 0;
+    // nearest live core in range without one of this tower's barriers already overhead
+    const spot = state.cores
+      .filter((c) => c.hp > 0 && c.pos.distanceTo(tower.pos) <= TOWER_DEFS[tower.defId].tiers[tower.tier].rangeRadius)
+      .filter((c) => !owned.some((b) => Math.hypot(b.pos.x - c.pos.x, b.pos.z - c.pos.z) < 2))
+      .sort((a, b) => a.pos.distanceTo(tower.pos) - b.pos.distanceTo(tower.pos))[0]?.pos ?? tower.pos;
+    state.barriers.push({
+      id: state.nextId++,
+      towerId: tower.id,
+      pos: spot.clone().setY(BARRIER_HEIGHT),
+      hp: spec.hp,
+      maxHp: spec.hp,
+      radius: spec.radius,
+      alive: true,
+    });
+  }
+
+  // orphans die with their tower
+  for (const barrier of state.barriers) {
+    if (barrier.alive && !state.towers.some((t) => t.id === barrier.towerId && t.alive)) barrier.alive = false;
+  }
+
+  // soak: anything descending through the plate is absorbed (no bounty — it
+  // wasn't shot down). Hacked units are ours and pass through. Warheads never checked.
+  for (const barrier of state.barriers) {
+    if (!barrier.alive) continue;
+    for (const enemy of state.enemies) {
+      if (!enemy.alive || enemy.hacked) continue;
+      if (enemy.defId === "mothership") continue; // the hulk crushes past, barriers don't stop bosses
+      if (enemy.pos.y > barrier.pos.y) continue;
+      if (Math.hypot(enemy.pos.x - barrier.pos.x, enemy.pos.z - barrier.pos.z) > barrier.radius) continue;
+      enemy.alive = false;
+      barrier.hp--;
+      state.effects.blasts.push({ pos: enemy.pos.clone(), radius: 4, ttl: 0.3, maxTtl: 0.3, kind: "flak" });
+      if (barrier.hp <= 0) break;
+    }
+    if (barrier.hp > 0) {
+      for (const bomb of state.bombs) {
+        if (!bomb.alive || bomb.pos.y > barrier.pos.y) continue;
+        if (Math.hypot(bomb.pos.x - barrier.pos.x, bomb.pos.z - barrier.pos.z) > barrier.radius) continue;
+        bomb.alive = false;
+        barrier.hp--;
+        state.effects.blasts.push({ pos: bomb.pos.clone(), radius: 4, ttl: 0.3, maxTtl: 0.3, kind: "flak" });
+        if (barrier.hp <= 0) break;
+      }
+    }
+    if (barrier.hp <= 0) {
+      barrier.alive = false;
+      state.effects.blasts.push({ pos: barrier.pos.clone(), radius: barrier.radius, ttl: 0.5, maxTtl: 0.5, kind: "impact" });
+    }
+  }
+  state.barriers = state.barriers.filter((b) => b.alive);
+  state.bombs = state.bombs.filter((b) => b.alive);
+  state.enemies = state.enemies.filter((e) => e.alive);
 }
 
 /** Napalm clouds (§4): chip DPS to every invader inside; warheads untouched

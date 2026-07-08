@@ -6,7 +6,7 @@ A 3D tower defense on a single rotating orbital defence platform. Alien waves de
 
 This document is the buildable spec. It encodes every decision from the design interview and live playtest passes on 2026-07-07. Numbers marked **[tunable]** are starting values expected to change in playtesting; everything else is a locked design decision. Builder agents should implement from this doc without re-deriving choices.
 
-**Current implementation snapshot:** EXODEF is playable through wave 50 and freeplay with eight tower types, seven enemy types plus the mothership boss, plotted missile interception, persistent radar, WebAudio cues, local high score, and paid damaged-core repair. Phase 7 added Napalm Clouder + Aerial Hack Array towers and Splitter + Swarm Cluster enemies. Balance tuning is intentionally deferred until the user chooses that as a next phase.
+**Current implementation snapshot:** EXODEF is playable through wave 50 and freeplay with ten tower types, seven enemy types plus the mothership boss, plotted missile interception, persistent radar, WebAudio cues, local high score, and paid damaged-core repair. Phase 7 added Napalm Clouder + Aerial Hack Array towers and Splitter + Swarm Cluster enemies; Phase 8 added Blockade Launcher + Nuke. The balance pass is the agreed next phase (user, 2026-07-07).
 
 ---
 
@@ -97,7 +97,7 @@ Band edges **[tunable]**.
 
 ## 4. Towers
 
-All towers are **data-driven** — adding a tower is adding a data entry + a model, no new systems. The current playable roster is eight towers: the original gun/flak/battery set, Phase 6 repulsor/AA missile/drone, and Phase 7 napalm clouder + aerial hack array.
+All towers are **data-driven** — adding a tower is adding a data entry + a model, no new systems. The current playable roster is ten towers: the original gun/flak/battery set, Phase 6 repulsor/AA missile/drone, Phase 7 napalm clouder + aerial hack array, and Phase 8 blockade launcher + nuke.
 
 Towers occupy a circular footprint (radius 6 u), placed freely on open ground (§ placement rules in 11.2). Every tower has **1 HP** — any bomb/warhead/landing that touches it destroys it; rebuild costs full price. Range is a **sphere** (dome above ground) centered on the tower.
 
@@ -113,6 +113,8 @@ Towers occupy a circular footprint (radius 6 u), placed freely on open ground (�
 | **Drone Launcher** | $350 | broad | HIGH | persistent drone DPS | Maintains reusable drones; tier upgrades increase active drone cap. |
 | **Napalm Clouder** | $350 | 70 | LOW/MID (≤60) | 12 DPS chip field | *(Phase 7)* Auto-lobs a canister that bursts into a lingering cloud (~6s, 14 u); chip damage to everything inside. Area denial vs lingerers: swarm clusters, splitter fragments, the slow-sinking boss. Never affects warheads. |
 | **Aerial Hack Array** | $500 | 90 | ≤130 | conversion | *(Phase 7)* Converts one invader into a kamikaze that rams the closest other invader and detonates (small AoE); self-destructs harmlessly if alone. Mothership immune. The hacked unit pays no bounty; its kills pay normal bounty. Holds fire unless ≥2 targets exist. |
+| **Blockade Launcher** | $400 | 60 | barrier hovers ~y=10 | none (defensive) | *(Phase 8)* Launches a translucent hex barrier over the nearest core in range (else over itself). Descending impacts — landings, plunges, falling bombs — consume 1 charge each (3 at T1); shattered barriers rebuild slowly. Bosses crush past; warheads pass through (interception stays player-plotted). |
+| **Nuke** | $250 (fool's gold — deliberately cheap) | global | all | one-shot wipe | *(Phase 8)* Player-fired from the tower panel, never automatic. Vaporizes every non-boss invader (NO bounties) and falling bombs, deals heavy damage to a mothership — and levels every tower except batteries, silo included. Cores and enemy warheads untouched. The real price is your defense grid. |
 
 ### Upgrade tiers (each tower: 2 upgrade tiers, applied per-tower)
 
@@ -126,6 +128,8 @@ Towers occupy a circular footprint (radius 6 u), placed freely on open ground (�
 | Drone | $330 → 2 active drones | $620 → 3 active drones, stronger/faster coverage |
 | Napalm | $300 → bigger/longer/hotter clouds, faster lob | $560 → 22 DPS, radius 20, ~8s clouds |
 | Hack Array | $420 → shorter cooldown, stronger blast | $760 → 5.5s cooldown, 130 dmg, wider AoE |
+| Blockade | $320 → 4 charges, faster rebuild, more reach | $600 → 5 charges, 2 simultaneous barriers |
+| Nuke | — (single tier: one shot, no upgrades) | — |
 
 Additional batteries: **$600** each **[tunable]**. All numbers **[tunable]**.
 
@@ -135,7 +139,7 @@ Targeting priority (per tower, cycle on click): First (lowest altitude) / Strong
 
 ```ts
 interface TowerDef {
-  id: string;                    // "gun", "flak", "battery", "repulsor", "aaMissile", "drone", "napalm", "hack"
+  id: string;                    // "gun", "flak", "battery", "repulsor", "aaMissile", "drone", "napalm", "hack", "blockade", "nuke"
   cost: number;
   footprintRadius: number;       // 6
   tiers: TowerTier[];            // index 0 = base
@@ -157,6 +161,9 @@ interface TowerTier {
             cloudRadius: number; cloudDuration: number };       // napalm
   hack?: { cooldown: number; kamikazeSpeed: number;
            damage: number; aoeRadius: number };                 // hack array
+  barrier?: { hp: number; rebuildTime: number;
+              radius: number; count: number };                  // blockade
+  nuke?: { bossDamage: number };                                // nuke (one-shot)
 }
 ```
 
@@ -417,7 +424,7 @@ HP × `1.06^(wave−50)`, counts +10%/wave, volley every 2–3 waves, warhead ca
 | TAB | Toggle map ⇄ coordinate view (only while a volley is active) |
 | Q / E, or right-drag | Orbit map camera |
 | Scroll | Zoom step |
-| 1–8 | Select tower type for placement (gun / flak / battery / repulsor / AA missile / drone / napalm / hack array) |
+| 1–0 | Select tower type for placement (gun / flak / battery / repulsor / AA missile / drone / napalm / hack array / blockade / nuke) |
 | ESC | Cancel placement / close panel |
 | ENTER | Start next round |
 | X (or HUD button) | Toggle 3× fast-forward **[tunable]** (2026-07-07 playtest QoL; auto-resets to 1× when a volley launches — the siren moment is never fast-forwarded) |
@@ -524,7 +531,7 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 **Backlog (explicitly not current active scope):**
 - Radar tower is not active scope; the persistent HUD radar already solves the v1 readability problem. Any future radar tower would need a distinct support role.
 - High-alt sniper tower remains a possible future concept, but "Beam" now means the Repulsor Beam control tower.
-- More enemies: shielded tank, **tower-hunter drone** (user idea 2026-07-07: independent drone that hunts towers; pairs with the Blockade Launcher as its counter). ~~Splitter~~ **PROMOTED 2026-07-07 into Phase 7** — see §5. (Mothership/boss stages were promoted into core v1 earlier — see §5/§9.)
+- More enemies: shielded tank. ~~Tower-hunter drone~~ **CUT 2026-07-07 (user)**: with bombers already targeting towers 30% of the time and divers plunging at structures, it would duplicate the dive bomber's niche. ~~Splitter~~ **PROMOTED 2026-07-07 into Phase 7** — see §5. (Mothership/boss stages were promoted into core v1 earlier — see §5/§9.)
 - MIRV warheads (split at MID — interception triage drama)
 - **Converging volleys — multiple headings in one volley** (2026-07-07, user): warheads closing on the cores from several compass directions simultaneously. Today every volley already comes from a random direction, but all warheads *within* a volley share it — the coordinate view's whole frame (§7.1) and the top view's approach-side overage assume one heading. Multi-heading needs a view rethink: per-heading sub-volleys the player cycles between, or a symmetric top view with a rotating frame. Good candidate for a late-game/freeplay escalation once the basic plotting loop is proven.
 - Gamepad support (twin-stick aiming maps beautifully to the two-viewport scheme)
@@ -536,12 +543,12 @@ setViewport(renderer, 0, 0.0, 1.0, 0.3); renderer.render(scene, topCam);
 - **Frag bomb** — (no further notes yet)
 - ~~**Unlimited-range missile tower**~~ — **PROMOTED 2026-07-07 as AA Missile tower.** Slow guided anti-invader shots; never targets warheads.
 - ~~**"Napalm clouder"**~~ — **PROMOTED 2026-07-07 into Phase 7 as Napalm Clouder.** Lobbed canister → lingering chip-damage cloud; volume grows with upgrade, never full x/y.
-- **Orbital mine launcher** — launches magnetic mine, exact mechanics tbd. **Phase 8 shortlist** (user, 2026-07-07).
+- **Orbital mine launcher** — launches magnetic mine, exact mechanics tbd. **DEFERRED 2026-07-07 (user)**: its parked-area-damage niche overlaps napalm for now; revisit after the balance pass if a gap appears.
 - ~~**Repulsor beam**~~ — **PROMOTED 2026-07-07 as Repulsor Beam tower.** Applies upward-retreat debuffs on a cooldown.
 - ~~**Aerial hack array**~~ — **PROMOTED 2026-07-07 into Phase 7 as Aerial Hack Array.** One-run kamikaze conversion, closest-unit targeting, self-destruct if alone.
-- **Blockade launcher** — purely defensive unit, slowly builds and launches physical barriers, not very high up but can soak 2–3 basic enemy impacts. Might be tricky to balance. **Phase 8 shortlist** (user, 2026-07-07) — pairs with the tower-hunter drone enemy.
+- ~~**Blockade launcher**~~ — **PROMOTED 2026-07-07 into Phase 8 as Blockade Launcher.** Hovering umbrella barriers over the nearest core; 3 soak charges, slow rebuild.
 - ~~**Drone launcher**~~ — **PROMOTED 2026-07-07 as Drone Launcher tower.** Persistent reusable drones with tiered active-drone caps.
-- **Nuke** — not automatic; can wipe all but bosses, but wipes player towers as well, except the missile battery.
+- ~~**Nuke**~~ — **PROMOTED 2026-07-07 into Phase 8 as Nuke.** One-shot cheap silo ("fool's gold" per user), fired from the tower panel; wipes non-boss invaders bounty-free and levels all towers except batteries.
 
 ---
 

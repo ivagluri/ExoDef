@@ -21,6 +21,10 @@ export const MODEL_COLORS = {
   hackArray: 0xd18cff,
   hackTip: 0x35e0e8,
   hackedTint: 0x35e0e8, // converted kamikazes read as friendly cyan
+  blockade: 0x9aa7c0,
+  barrier: 0x8fd8ff,
+  nukeBody: 0x2a3148,
+  nukeWarning: 0xff5a5a,
   grunt: 0xe040c8,
   bomber: 0x54e05a,
   diver: 0xff5a5a,
@@ -140,6 +144,31 @@ export function makeTowerModel(defId: string): THREE.Group {
       tip.position.set(x, 2.4 + h + 0.8, z);
       group.add(mast, tip);
     }
+  } else if (defId === "blockade") {
+    // fabricator: slab base + gantry frame + a stacked barrier plate ready to launch
+    const base = new THREE.Mesh(new THREE.BoxGeometry(8, 2.6, 8), lambert(MODEL_COLORS.blockade));
+    base.position.y = 1.3;
+    const postA = new THREE.Mesh(new THREE.BoxGeometry(1, 6.5, 1), lambert(MODEL_COLORS.blockade));
+    postA.position.set(-3, 5.5, 0);
+    const postB = postA.clone();
+    postB.position.x = 3;
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(8, 1, 1.6), lambert(MODEL_COLORS.blockade));
+    beam.position.y = 8.6;
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 0.5, 6), lambert(MODEL_COLORS.barrier));
+    plate.position.y = 5.2;
+    group.add(base, postA, postB, beam, plate);
+  } else if (defId === "nuke") {
+    // squat hardened silo, warning ring, exposed red warhead tip
+    const bunker = new THREE.Mesh(new THREE.CylinderGeometry(4.4, 5, 3.2, 8), lambert(MODEL_COLORS.nukeBody));
+    bunker.position.y = 1.6;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(4.4, 0.5, 5, 8), lambert(MODEL_COLORS.nukeWarning));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = 3.3;
+    const missile = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 5, 8), lambert(MODEL_COLORS.blockade));
+    missile.position.y = 5.4;
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(1.5, 2.6, 8), lambert(MODEL_COLORS.nukeWarning));
+    tip.position.y = 9.2;
+    group.add(bunker, ring, missile, tip);
   } else {
     // fallback: unmistakable placeholder
     const box = new THREE.Mesh(new THREE.BoxGeometry(6, 8, 6), lambert(0xff00ff));
@@ -147,6 +176,20 @@ export function makeTowerModel(defId: string): THREE.Group {
     group.add(box);
   }
   return group;
+}
+
+/** Hovering blockade barrier: translucent hex plate; opacity tracks remaining charges. */
+export function makeBarrierModel(): THREE.Mesh {
+  return new THREE.Mesh(
+    new THREE.CylinderGeometry(1, 1, 0.14, 6),
+    new THREE.MeshBasicMaterial({
+      color: MODEL_COLORS.barrier,
+      transparent: true,
+      opacity: 0.45,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  );
 }
 
 export function makeEnemyModel(defId: string): THREE.Object3D {

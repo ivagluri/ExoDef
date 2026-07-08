@@ -28,6 +28,19 @@ export interface Tower {
   battery?: { ammo: number; reloadLeft: number; inFlight: number };
   /** the free pre-placed central battery: no cash-out of a free tower */
   noSell?: boolean;
+  /** blockade towers: build progress (seconds) toward the next barrier */
+  barrierTimer?: number;
+}
+
+/** Hovering blockade barrier: soaks descending impacts over a core (§4). */
+export interface Barrier {
+  id: number;
+  towerId: number;
+  pos: THREE.Vector3;
+  hp: number;
+  maxHp: number;
+  radius: number;
+  alive: boolean;
 }
 
 /** Per-enemy behavior state for individually-moving enemies (bomber/diver/ufo). */
@@ -197,6 +210,7 @@ export interface GameState {
   groups: GruntGroup[];
   shells: Shell[];
   clouds: Cloud[];
+  barriers: Barrier[];
   aaMissiles: AAMissile[];
   drones: Drone[];
   bombs: Bomb[];
@@ -247,6 +261,7 @@ export function createGameState(): GameState {
     groups: [],
     shells: [],
     clouds: [],
+    barriers: [],
     aaMissiles: [],
     drones: [],
     bombs: [],

@@ -2,7 +2,7 @@
 
 Missile Command x Space Invaders x tower defense on a rotating orbital defence platform.
 
-The game is playable in the browser with a complete wave-50 arc, freeplay, eight tower types, seven enemy types plus mothership boss waves, plotted missile interception, persistent radar, WebAudio cues, local high score, and paid damaged-core repair.
+The game is playable in the browser with a complete wave-50 arc, freeplay, ten tower types, seven enemy types plus mothership boss waves, plotted missile interception, persistent radar, WebAudio cues, local high score, and paid damaged-core repair.
 
 ## Run
 
@@ -21,7 +21,7 @@ Read these first:
 - `BUILD-PLAN.md` — current phase tracker, latest status, next-agent checklist, session log.
 - `GAME-DESIGN.md` — buildable gameplay spec and backlog.
 
-Current resume state: Phase 7 (Napalm Clouder + Aerial Hack Array towers; Splitter + Swarm Cluster enemies) is built and awaiting user browser playtest. A Phase 8 shortlist (Orbital Mine + Blockade Launcher with paired enemies) and the deferred balance pass are the queued candidates — confirm direction with the user before starting either.
+Current resume state: Phases 7–8 are built and awaiting user browser playtest — the roster is complete at ten towers (Phase 7: napalm + hack array with splitter + swarm enemies; Phase 8: blockade launcher + one-shot nuke). The user has declared roster expansion done; the **balance pass** is the agreed next phase (economy generosity, stronger-enemy volume, per-tower tuning — see BUILD-PLAN backlog notes).
 
 ## Guardrails
 

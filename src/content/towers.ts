@@ -21,6 +21,10 @@ export interface TowerTier {
   cloud?: { period: number; shellSpeed: number; dps: number; cloudRadius: number; cloudDuration: number };
   /** hack array: converts one invader into a kamikaze that rams the closest other invader; mothership immune */
   hack?: { cooldown: number; kamikazeSpeed: number; damage: number; aoeRadius: number };
+  /** blockade: maintains hovering barriers over nearby cores that soak descending impacts */
+  barrier?: { hp: number; rebuildTime: number; radius: number; count: number };
+  /** nuke: one-shot player-fired silo — wipes non-boss invaders AND all towers except batteries */
+  nuke?: { bossDamage: number };
 }
 
 export interface TowerDef {
@@ -137,8 +141,36 @@ export const TOWER_DEFS: Record<string, TowerDef> = {
       { upgradeCost: 760, rangeRadius: 110, maxAltitude: 155, hack: { cooldown: 5.5, kamikazeSpeed: 46, damage: 130, aoeRadius: 14 } },
     ],
   },
+  blockade: {
+    id: "blockade",
+    name: "BLOCKADE",
+    cost: 400,
+    hotkey: "9",
+    role: "support",
+    // Purely defensive: launches a hovering barrier over the nearest core in
+    // range (or over itself). Descending impacts consume charges; the tower
+    // slowly builds the next barrier after one shatters.
+    tiers: [
+      { upgradeCost: 0, rangeRadius: 60, maxAltitude: 0, barrier: { hp: 3, rebuildTime: 12, radius: 11, count: 1 } },
+      { upgradeCost: 320, rangeRadius: 70, maxAltitude: 0, barrier: { hp: 4, rebuildTime: 9, radius: 12, count: 1 } },
+      { upgradeCost: 600, rangeRadius: 80, maxAltitude: 0, barrier: { hp: 5, rebuildTime: 8, radius: 13, count: 2 } },
+    ],
+  },
+  nuke: {
+    id: "nuke",
+    name: "NUKE",
+    // "Fool's gold" (user, 2026-07-07): temptingly cheap — the real price is
+    // your defense grid. One shot, fired from the tower panel, consumes the silo.
+    cost: 250,
+    hotkey: "0",
+    role: "support",
+    tiers: [
+      { upgradeCost: 0, rangeRadius: 0, maxAltitude: 0, nuke: { bossDamage: 600 } },
+    ],
+  },
   // "radar" is backlog; the persistent HUD radar covers the v1 readability need.
+  // Orbital mine launcher deferred: its parked-area-damage niche overlaps napalm for now.
 };
 
 /** Towers available on the build bar this phase. */
-export const BUILDABLE = ["gun", "flak", "battery", "repulsor", "aaMissile", "drone", "napalm", "hack"] as const;
+export const BUILDABLE = ["gun", "flak", "battery", "repulsor", "aaMissile", "drone", "napalm", "hack", "blockade", "nuke"] as const;
