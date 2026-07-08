@@ -90,6 +90,10 @@ export function makeTowerModel(defId: string): THREE.Group {
     light.position.set(0, 3.4, 4.2);
     group.add(slab, siloA, siloB, light);
     group.userData.lightMat = lightMat;
+    // the second tube is the T3 twin-silo upgrade made visible — RenderSync
+    // toggles it from the tower's actual tier data (tier visuals show capability)
+    siloB.visible = false;
+    group.userData.siloB = siloB;
   } else if (defId === "repulsor") {
     const base = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.8, 3, 8), lambert(MODEL_COLORS.repulsor));
     base.position.y = 1.5;

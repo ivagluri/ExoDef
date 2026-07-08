@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { SWARM } from "../content/enemies";
+import { TOWER_DEFS } from "../content/towers";
 import type { BlastKind, GameState } from "../sim/state";
 import { makeAAMissileModel, makeBarrierModel, makeBlastModel, makeBombModel, makeDroneModel, makeEnemyModel, makeInterceptorModel, makeShellModel, makeTowerModel, makeWarheadModel, MODEL_COLORS, type BlastVisual } from "./models";
 
@@ -73,6 +74,12 @@ export class RenderSync {
       (t) => makeTowerModel(t.defId),
       (t, obj) => {
         obj.position.copy(t.pos);
+        // battery twin silo: the second tube appears with the T3 upgrade (silos: 2)
+        const siloB = obj.userData.siloB as THREE.Mesh | undefined;
+        if (siloB) {
+          const twin = (TOWER_DEFS[t.defId].tiers[t.tier].interceptor?.silos ?? 0) > 1;
+          if (siloB.visible !== twin) siloB.visible = twin;
+        }
         // battery status light: dormant until the first siren (§3)
         const lightMat = obj.userData.lightMat as THREE.MeshBasicMaterial | undefined;
         if (lightMat) {
