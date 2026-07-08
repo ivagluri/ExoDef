@@ -155,6 +155,7 @@ User direction 2026-07-07: two more towers (hotkeys 9/0), then balance. Orbital 
 
 ## Backlog notes
 
+- **Barrier visual height** (user playtest 2026-07-07): split logic and display — keep the soak hitbox at its current altitude (y≈10, `BARRIER_HEIGHT` in `src/sim/towers.ts`) but render the plate higher so it visually clears the core cluster models instead of intersecting them. Display-only change in `sync.ts`'s barrier reconcile.
 - Economy is too generous — tighten income/bounties/costs together after the expanded roster stabilizes.
 - Stronger-enemy volume too low as stages progress; decide later between composition, enemy strength, and economy levers.
 - Battery upgrade direction: bigger blast radius vs. fan-shot/persistent blast/cluster warhead; defer until roster playtest.
