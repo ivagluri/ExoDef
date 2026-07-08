@@ -5,7 +5,8 @@ import { makeGhost, makeRangeDome } from "../render/models";
 import { toast, type GameState, type Tower } from "../sim/state";
 
 // Tower placement (GAME-DESIGN.md §11.2): pick from build bar → ghost + range dome
-// follows cursor, green/red validity → left-click places, ESC/right-click cancels.
+// follows cursor, green/red validity → left-click places, ESC/right-click fully
+// deselects (cancels placement and closes the tower/core panel).
 // Clicking a placed tower (no build selection active) opens its upgrade panel.
 
 export class PlacementInput {
@@ -31,7 +32,13 @@ export class PlacementInput {
     dom.addEventListener("pointermove", (ev) => this.updatePointer(ev, dom));
     dom.addEventListener("pointerdown", (ev) => {
       if (ev.button === 0) this.click();
-      if (ev.button === 2 && this.selection) this.select(null);
+      // right-click = full deselect, same as ESC (desktop QoL, playtest 2026-07-07):
+      // cancels an active placement AND closes the tower/core panel
+      if (ev.button === 2) {
+        if (this.selection) this.select(null);
+        this.selectedTowerId = null;
+        this.selectedCoreIndex = null;
+      }
     });
     window.addEventListener("keydown", (ev) => {
       if (ev.code === "Escape") {
@@ -140,7 +147,10 @@ export class PlacementInput {
         tower.battery = { ammo, reloadLeft: 0, inFlight: 0 };
       }
       this.state.towers.push(tower);
-      this.selectedTowerId = tower.id;
+      // no auto-open of the tower panel: placement mode and the info panel are
+      // mutually exclusive (playtest 2026-07-07 — the panel trapped open while
+      // placing, then stacked over the returning build bar)
+      this.selectedTowerId = null;
       this.selectedCoreIndex = null;
       return;
     }

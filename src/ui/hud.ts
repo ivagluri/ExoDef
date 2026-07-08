@@ -17,6 +17,7 @@ export interface Hud {
 
 export interface HudSettings {
   open: boolean;
+  buildOpen: boolean;
   simSpeed: number;
   volume: number;
   highScore: number;
@@ -25,6 +26,7 @@ export interface HudSettings {
 export function createHud(handlers: {
   onStart: () => void;
   onSelect: (id: string | null) => void;
+  onToggleBuild: () => void;
   onUpgrade: () => void;
   onSell: () => void;
   onPriority: () => void;
@@ -49,7 +51,10 @@ export function createHud(handlers: {
         padding: 10px 16px; font-size: 14px; letter-spacing: 0.06em;
       }
       #hud .top { top: 0; text-shadow: 0 1px 3px #000a; }
-      #hud .bottom { bottom: 0; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+      /* two pinned lines (playtest 2026-07-07): the unit picker always opens on
+         its own line ABOVE the control row, so speed/config/start never move
+         when the picker expands, wraps, or button text changes width */
+      #hud .bottom { bottom: 0; flex-direction: column; align-items: flex-start; gap: 8px; }
       #hud button {
         pointer-events: auto; font: inherit; color: #d7dce8;
         background: #141b31d9; border: 1px solid #3a4568; border-radius: 4px;
@@ -111,9 +116,14 @@ export function createHud(handlers: {
       #hud.coord .bar, #hud.coord .alert, #hud.coord .panel { display: none !important; }
       #hud.coord .coordbar { display: flex; }
       #hud.coord .coorddiv { display: block; }
-      #hud .tag { position: absolute; left: 12px; bottom: 92px; font-size: 11px; opacity: 0.6; }
-      /* the arcade playfield mark (§12 vibe): the game name lives on screen */
+      /* the arcade playfield mark (§12 vibe): the game name lives on screen.
+         Pinned top-left under the cash readout — nothing else ever lives there
+         (playtest 2026-07-07: the old bottom-left spot is picker territory now) */
+      #hud .tag { position: absolute; left: 16px; top: 42px; font-size: 11px; opacity: 0.6; }
       #hud .tag b { color: #35e0e8; font-weight: normal; letter-spacing: 0.14em; }
+      @media (max-width: 640px) {
+        #hud .tag .hints { display: none; } /* phones: just the mark */
+      }
       #hud .panel {
         position: absolute; right: 14px; bottom: 60px; display: flex;
         flex-direction: column; gap: 6px; padding: 10px 12px; max-width: 286px;
@@ -147,6 +157,14 @@ export function createHud(handlers: {
         #hud .buildbtn canvas { width: 52px; height: 34px; }
         #hud .buildbtn span { font-size: 9px; }
       }
+      /* phones (playtest, iPhone SE): the tower/core panel moves to the top and
+         pops over the radar — the only real estate that isn't map or controls */
+      @media (max-width: 640px) {
+        #hud .panel {
+          top: 42px; bottom: auto; left: 10px; right: 10px;
+          max-width: none; z-index: 3;
+        }
+      }
     </style>
     <div class="bar top">
       <span data-el="cash"></span>
@@ -156,6 +174,8 @@ export function createHud(handlers: {
     <div class="bar bottom">
       <div class="build" data-el="build"></div>
       <div class="build">
+        <button data-el="cancelplace" style="border-color:#ff5a5a;color:#ff8a8a;display:none">✕ CANCEL</button>
+        <button data-el="buildtoggle" title="show/hide build menu">▲ BUILD</button>
         <button data-el="speed" title="fast-forward [X]">▶▶ 3×</button>
         <button data-el="settings" title="settings">⚙</button>
         <button class="start" data-el="start">▶ START ROUND 1</button>
@@ -210,7 +230,7 @@ export function createHud(handlers: {
       <small data-el="victoryscore"></small>
       <small>FREEPLAY UNLOCKED</small>
     </div>
-    <div class="tag"><b>EXODEF COMMAND</b> · 1-0 build · X 3× speed · TAB intercept · Q/E rotate · scroll zoom · ENTER start</div>
+    <div class="tag"><b>EXODEF COMMAND</b><span class="hints"> · 1-0 build · TAB intercept · ENTER start</span></div>
   `;
 
   const el = (name: string) => hud.querySelector<HTMLElement>(`[data-el="${name}"]`)!;
@@ -257,6 +277,8 @@ export function createHud(handlers: {
   animateTowerPickerPreviews(previews);
   const startBtn = el("start") as HTMLButtonElement;
   press(startBtn, () => handlers.onStart());
+  press(el("buildtoggle"), () => handlers.onToggleBuild());
+  press(el("cancelplace"), () => handlers.onSelect(null));
   press(el("pupgrade"), () => handlers.onUpgrade());
   press(el("prepair"), () => handlers.onRepair());
   press(el("pfire"), () => handlers.onFireNuke());
@@ -305,6 +327,18 @@ export function createHud(handlers: {
       setText(el("cash"), `$${state.cash}`);
       setText(el("round"), state.round === 0 ? "PLACE YOUR DEFENSES" : `ROUND ${state.round}`);
       setText(el("right"), `◆ ${coresAlive(state)}/6 · SCORE ${state.score} · BEST ${bestScore}`);
+      // Small screens (playtest, iPhone SE): the ten-slot bar buries the map, so
+      // it collapses via the BUILD toggle and auto-hides while placing — a red
+      // ✕ CANCEL button stands in (the touch equivalent of ESC/right-click).
+      const placing = selection !== null;
+      setDisplay(buildBar, settings.buildOpen && !placing ? "flex" : "none");
+      const toggleBtn = el("buildtoggle") as HTMLButtonElement;
+      setDisplay(toggleBtn, placing ? "none" : "");
+      setText(toggleBtn, settings.buildOpen ? "▼ BUILD" : "▲ BUILD");
+      toggleBtn.classList.toggle("sel", settings.buildOpen);
+      const cancelBtn = el("cancelplace") as HTMLButtonElement;
+      setDisplay(cancelBtn, placing ? "" : "none");
+      if (placing) setText(cancelBtn, `✕ CANCEL ${TOWER_DEFS[selection].name}`);
       for (const [id, btn] of buttons) {
         btn.classList.toggle("sel", selection === id);
         setDisabled(btn, state.cash < TOWER_DEFS[id].cost && selection !== id);

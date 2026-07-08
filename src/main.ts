@@ -78,7 +78,11 @@ const hud = createHud({
   },
   onSelect: (id) => {
     audio.unlock();
-    placement.select(placement.selection === id ? null : id);
+    placement.select(id !== null && placement.selection === id ? null : id);
+  },
+  onToggleBuild: () => {
+    audio.unlock();
+    buildOpen = !buildOpen;
   },
   onUpgrade: () => {
     audio.unlock();
@@ -140,6 +144,10 @@ const hud = createHud({
     triggerTestSwarm(state);
   },
 });
+
+// Build menu visibility (small-screen playtest 2026-07-07): collapsible, and
+// auto-hidden while a placement is in progress.
+let buildOpen = true;
 
 // 3× fast-forward (playtest QoL 2026-07-07): scales how many fixed-size sim
 // ticks run per frame — never the tick size, so the sim stays deterministic.
@@ -272,6 +280,7 @@ function frame(now: number): void {
   sync.sync(state);
   hud.update(state, placement.selection, placement.selectedTowerId, placement.selectedCoreIndex, coordView.hudInfo(state), {
     open: settings.open,
+    buildOpen,
     simSpeed,
     volume: settings.volume,
     highScore,
