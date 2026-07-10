@@ -11,7 +11,7 @@ This file is the **phase tracker**. Rules for any agent working on this project:
 4. Keep the architecture: fixed-timestep sim (never pauses for view changes), data-driven content defs, plain entity arrays. See GAME-DESIGN.md §13.
 5. The user is a non-programmer who playtests in the browser (`npm run dev`). Every phase must end in a runnable state.
 
-**Status: Phases 7–8 + small-screen UX COMPLETE, committed and pushed — the BALANCE PASS is the agreed next phase (not yet started)** (updated 2026-07-07)
+**Status: Phase 9 BALANCE PASS IN PROGRESS — scenario harness being built, user balance interview done (see Phase 9 findings); no balance numbers changed yet** (updated 2026-07-09)
 
 > **Resume here (fresh context):** read `GAME-DESIGN.md` first, then this section. The current build: complete wave-50/freeplay arc, boss stages, audio/settings/high score, plotted-only missile interception, **ten-tower roster** (Phase 7: Napalm Clouder + Aerial Hack Array; Phase 8: Blockade Launcher + one-shot Nuke), **seven enemy types** (Phase 7: Splitter + Swarm Cluster, debuting waves 12/14 and in the 16+ formula), paid damaged-core repair, and a small-screen/UX pass (playtested on iPhone SE simulator + desktop). The user explicitly closed roster expansion ("let's build two more then we can settle in for the fun balancing part") — **the next phase is the balance pass**: economy generosity, stronger-enemy volume, and per-tower tuning across all ten towers. Interview the user for playtest-driven targets before changing numbers; all tunables live in `src/balance.ts` and `src/content/`.
 
@@ -139,7 +139,7 @@ User direction 2026-07-07: two more towers (hotkeys 9/0), then balance. Orbital 
 
 **DoD:** both towers buildable, barrier visibly protects a core, nuke fires from the panel with its trade-off intact, `npm run build` + `npm run smoke` pass. **User browser playtest decides follow-up fixes; the balance pass is next.**
 
-## Phase 9 — Balance pass (NEXT — not started)
+## Phase 9 — Balance pass (IN PROGRESS — started 2026-07-09)
 
 The agreed next phase (user, 2026-07-07). **Build the measuring tools before touching any numbers.**
 
@@ -149,7 +149,12 @@ The agreed next phase (user, 2026-07-07). **Build the measuring tools before tou
   - **No-interception run** — plays the ground war but never fires interceptors: should fail fast around the first volleys (sanity check that missiles matter).
   - **Current smoke build** — the existing mixed strategy as the baseline.
   - **Economy probe** — track cash surplus per round on the baseline; the "too generous" claim becomes a number.
-- [ ] Interview the user for felt playtest targets (what's boring, what's mandatory, what never gets bought) before changing numbers
+- [x] Interview the user for felt playtest targets (what's boring, what's mandatory, what never gets bought) before changing numbers — **done 2026-07-09, findings:**
+  - **Economy:** later waves "shower money," but that also funds more building/upgrading — the user is *not sure it's actually a problem*; wants data/playtest before tightening. → The economy probe decides; don't pre-emptively nerf income.
+  - **Drone tower is the must-build:** "level 3 drones are OP if there's enough of them." → Prime per-tower tuning target; the mono-drone scenario should confirm and quantify.
+  - **Boring stretches:** depend on tower picks, no fixed wave range to target.
+  - **Difficulty ceiling:** losing some cores by wave 50 is acceptable. Related backlog: the "tank a few hits with all cores gone before death" lives mechanic (Bloons-style bypass lives, logged 2026-07-07) is still wanted eventually.
+  - **Nuke:** used once (freeplay ~wave 55): cleared the wave but the user could not rebuild in time even with "gobs of cash left" — rebuild *time*, not cash, is the real cost. Verdict "not sure yet"; observe, don't retune blindly.
 - [ ] Tune economy (income/bounties/costs together), stronger-enemy volume as stages progress, and per-tower numbers across all ten towers — all in `src/balance.ts`/`src/content/`, re-running scenarios after each change
 - [ ] `npm run smoke` still passes end-to-end after tuning
 
@@ -190,6 +195,7 @@ The agreed next phase (user, 2026-07-07). **Build the measuring tools before tou
 
 Historical notes below are preserved for context. Any old "resume here" text inside this log has been superseded by the top-level Resume section.
 
+- **2026-07-09** — Phase 9 started. Balance interview done first (findings recorded under the Phase 9 checklist): economy verdict deferred to data, drone T3 flagged OP/must-build, core losses by 50 acceptable, nuke's real cost is rebuild time. Scenario harness (`scripts/scenarios.ts`) implementation delegated/in progress; no tuning numbers touched yet.
 - **2026-07-07** — Design doc completed and approved. Build plan created. Phase 1 started.
 - **2026-07-07** — Phase 1 complete: scaffold, world render, orbit camera, sim loop. `npm run build` clean, dev server verified. Note: Node.js was installed via Homebrew this session (machine had none). Files: `src/{main,balance}.ts`, `src/render/{scene,cameras}.ts`, `src/input/orbit.ts`, `src/sim/state.ts`, `src/ui/hud.ts`. Await user playtest of the diorama before/while starting Phase 2.
 - **2026-07-07** — Phase 2 complete: sim entities + game orchestration (`src/sim/{game,waves,enemies,towers}.ts`), placement input, render sync, full HUD. Headless smoke test added (`npm run smoke`, uses tsx) — run it after sim changes. **User playtest feedback applied:** grunt movement felt rigid (axis-locked Space Invaders march) → replaced with organic meander (wandering heading + continuous swelling sink + per-member bob); GAME-DESIGN.md §5 updated to match. Also: grunts fast-dive from ENTRY to y=100 before meandering (pacing — literal spec meant minutes of dead time).
