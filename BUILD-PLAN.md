@@ -151,7 +151,7 @@ The agreed next phase (user, 2026-07-07). **Build the measuring tools before tou
   - **Economy probe** — track cash surplus per round on the baseline; the "too generous" claim becomes a number.
 - [x] Interview the user for felt playtest targets (what's boring, what's mandatory, what never gets bought) before changing numbers — **done 2026-07-09, findings:**
   - **Economy:** later waves "shower money," but that also funds more building/upgrading — the user is *not sure it's actually a problem*; wants data/playtest before tightening. → The economy probe decides; don't pre-emptively nerf income.
-  - **Drone tower is the must-build:** "level 3 drones are OP if there's enough of them." → Prime per-tower tuning target; the mono-drone scenario should confirm and quantify.
+  - **Drone tower is the must-build:** "level 3 drones are OP if there's enough of them." → **Revised 2026-07-09 after mono-drone died w14:** the user allows it "was the drones in combination with other towers... perhaps a misattributed feeling." Do NOT nerf drones on feel alone — the drone-heavy-mixed scenario (tuning round 1) is the evidence gate.
   - **Boring stretches:** depend on tower picks, no fixed wave range to target.
   - **Difficulty ceiling:** losing some cores by wave 50 is acceptable. Related backlog: the "tank a few hits with all cores gone before death" lives mechanic (Bloons-style bypass lives, logged 2026-07-07) is still wanted eventually.
   - **Nuke:** used once (freeplay ~wave 55): cleared the wave but the user could not rebuild in time even with "gobs of cash left" — rebuild *time*, not cash, is the real cost. Verdict "not sure yet"; observe, don't retune blindly.
