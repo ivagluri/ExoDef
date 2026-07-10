@@ -45,10 +45,13 @@ export const TOWER_DEFS: Record<string, TowerDef> = {
     role: "direct",
     // Rebalanced per 2026-07-07 playtest: long reach, weak hits (chip damage from
     // the moment swarms settle into the formation band); flak owns kill power.
+    // Phase 9 (2026-07-09): upper-tier DPS roughly halved (T2 16→10, T3 24→12) so
+    // a mono-gun spam is competitive-but-not-guaranteed (limps to ~w49, bleeds out)
+    // rather than a comfortable 6/6 w50 cruise. Guns stay the cheap chip backbone.
     tiers: [
       { upgradeCost: 0, rangeRadius: 80, maxAltitude: 90, shot: { damage: 2, period: 0.25 } }, // 8 dps
-      { upgradeCost: 120, rangeRadius: 90, maxAltitude: 100, shot: { damage: 4, period: 0.25 } }, // 16 dps
-      { upgradeCost: 250, rangeRadius: 100, maxAltitude: 110, shot: { damage: 6, period: 0.25 } }, // 24 dps
+      { upgradeCost: 120, rangeRadius: 90, maxAltitude: 100, shot: { damage: 2.5, period: 0.25 } }, // 10 dps
+      { upgradeCost: 250, rangeRadius: 100, maxAltitude: 110, shot: { damage: 3, period: 0.25 } }, // 12 dps
     ],
   },
   flak: {
@@ -135,10 +138,14 @@ export const TOWER_DEFS: Record<string, TowerDef> = {
     cost: 500,
     hotkey: "8",
     role: "control",
+    // Phase 9 (2026-07-09): cooldowns lengthened (T1 9→11, T2 7→9, T3 5.5→7) to
+    // throttle the self-sustaining mono-hack spam (was a w50 4/6 cruise, now dies
+    // ~w11-17). Per-conversion punch (damage/AoE/speed) is untouched, so a single
+    // hack in a mixed build stays worth buying — it just can't carry a whole grid.
     tiers: [
-      { upgradeCost: 0, rangeRadius: 90, maxAltitude: 130, hack: { cooldown: 9, kamikazeSpeed: 34, damage: 60, aoeRadius: 10 } },
-      { upgradeCost: 420, rangeRadius: 100, maxAltitude: 140, hack: { cooldown: 7, kamikazeSpeed: 40, damage: 90, aoeRadius: 12 } },
-      { upgradeCost: 760, rangeRadius: 110, maxAltitude: 155, hack: { cooldown: 5.5, kamikazeSpeed: 46, damage: 130, aoeRadius: 14 } },
+      { upgradeCost: 0, rangeRadius: 90, maxAltitude: 130, hack: { cooldown: 11, kamikazeSpeed: 34, damage: 60, aoeRadius: 10 } },
+      { upgradeCost: 420, rangeRadius: 100, maxAltitude: 140, hack: { cooldown: 9, kamikazeSpeed: 40, damage: 90, aoeRadius: 12 } },
+      { upgradeCost: 760, rangeRadius: 110, maxAltitude: 155, hack: { cooldown: 7, kamikazeSpeed: 46, damage: 130, aoeRadius: 14 } },
     ],
   },
   blockade: {

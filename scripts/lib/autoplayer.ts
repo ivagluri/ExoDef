@@ -9,6 +9,7 @@ import * as THREE from "three";
 import { upgradeCost, upgradeTower } from "../../src/sim/actions";
 import { simTick, startRound } from "../../src/sim/game";
 import { batteryTier, fireInterceptor, pickBattery, warheadPointAt } from "../../src/sim/missiles";
+import { seedRng } from "../../src/sim/rng";
 import { coresAlive, createGameState, type GameState, type Warhead } from "../../src/sim/state";
 import { WAVE_COUNT } from "../../src/sim/waves";
 import { TOWER_DEFS } from "../../src/content/towers";
@@ -77,6 +78,9 @@ function interceptAim(s: GameState, w: Warhead): THREE.Vector3 | null {
  *  over is a valid RESULT, not an error — this never throws on a loss; it only
  *  throws on a genuine harness fault (sim hang / NaN). */
 export function runAutoPlay(strategy: Strategy, opts: RunOptions = {}): ScenarioReport {
+  // Every run starts from a pristine RNG stream so scenarios are order-independent
+  // and a tuning change in one tower can't reshuffle another scenario's enemies.
+  seedRng();
   const state = createGameState();
   const queue = strategy.buildQueue.slice(); // consumed via shift — don't mutate the caller's array
   const targeted = new Set<number>();

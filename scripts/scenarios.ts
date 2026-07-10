@@ -14,6 +14,7 @@ import {
   BASELINE_QUEUE,
   monoPlacements,
   runAutoPlay,
+  type Placement,
   type ScenarioReport,
   type Strategy,
 } from "./lib/autoplayer";
@@ -54,10 +55,36 @@ function noInterceptStrategy(): Strategy {
   };
 }
 
+// "Drone-heavy mixed" (user request, Phase 9 tuning round 1): a normal early
+// spine (guns/flak + the two batteries, ~the baseline's first ~10 entries) whose
+// mid/late queue is heavily drone towers, upgrades on. The user reports T3 drones
+// feel OP *in numbers within a mixed build* (mono-drone dies ~w14, so it's not a
+// solo effect). This scenario is a measurement probe only — do NOT tune drones
+// off it this round; it feeds the next tuning round.
+function droneHeavyStrategy(): Strategy {
+  const early = BASELINE_QUEUE.slice(0, 12); // 6 guns/flak spine + the 2 batteries
+  const droneSpots: Array<[number, number]> = [
+    [20, 32], [-20, -60], [62, 32], [-15, 55],
+    [-80, -80], [-45, -80], [45, -80], [80, -80],
+    [-85, -5], [-45, 5], [45, 5], [85, -5],
+    [-85, 60], [-35, 70], [35, 70], [85, 60],
+    [-15, -82], [15, -82],
+  ];
+  const lateDrones: Placement[] = droneSpots.map(([x, z]) => ["drone", x, z]);
+  return {
+    name: "drone-heavy mixed",
+    buildQueue: [...early, ...lateDrones],
+    allowUpgrades: true,
+    upgradeReserve: 200,
+    intercept: true,
+  };
+}
+
 const strategies: Strategy[] = [
   baselineStrategy(),
   noUpgradesStrategy(),
   noInterceptStrategy(),
+  droneHeavyStrategy(),
   ...MONO_TOWERS.map(monoStrategy),
 ];
 
